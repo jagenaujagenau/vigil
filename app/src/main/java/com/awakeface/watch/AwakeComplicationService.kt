@@ -31,7 +31,8 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? = when (type) {
         ComplicationType.SHORT_TEXT -> readout(
-            text = PlainComplicationText.Builder("14h 07m").build(),
+            hours = PlainComplicationText.Builder("14h").build(),
+            minutes = PlainComplicationText.Builder("07m").build(),
             description = PlainComplicationText.Builder("Awake 14 hours 7 minutes").build(),
             phase = Phase.AWAKE,
             withTapAction = false,
@@ -55,13 +56,20 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
         }
     }
 
-    /** "14h 07m", counting whichever stretch the wearer is in. */
+    /**
+     * The readout, counting whichever stretch the wearer is in.
+     *
+     * Hours and minutes are sent separately — hours as the text, minutes as the title — so the face
+     * can set them at different sizes. An hour is the figure you read at a glance; the minutes are
+     * detail, and typography should say so.
+     */
     private fun currentReadout(): ComplicationData {
         val state = AwakeState.current(WakeStore(this), System.currentTimeMillis())
 
         if (!state.isSet) {
             return readout(
-                text = PlainComplicationText.Builder(WAITING).build(),
+                hours = PlainComplicationText.Builder(WAITING_HOURS).build(),
+                minutes = PlainComplicationText.Builder(WAITING_MINUTES).build(),
                 description = PlainComplicationText.Builder(getString(R.string.awake_unset)).build(),
                 phase = Phase.AWAKE,
                 withTapAction = true,
@@ -69,7 +77,6 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
         }
 
         val elapsed = elapsedSince(state.sinceEpochMillis!!)
-        val fallback = "${state.hours}h ${state.minutes.toString().padStart(2, '0')}m"
         val description = getString(
             if (state.isAsleep) R.string.asleep_for else R.string.awake_for,
             state.hours,
@@ -77,7 +84,11 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
         )
 
         return readout(
-            text = DynamicComplicationText(durationText(elapsed), fallback),
+            hours = DynamicComplicationText(hoursText(elapsed), "${state.hours}h"),
+            minutes = DynamicComplicationText(
+                minutesText(elapsed),
+                "${state.minutes.toString().padStart(2, '0')}m",
+            ),
             description = PlainComplicationText.Builder(description).build(),
             phase = state.phase,
             withTapAction = true,
@@ -85,11 +96,13 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
     }
 
     private fun readout(
-        text: androidx.wear.watchface.complications.data.ComplicationText,
+        hours: androidx.wear.watchface.complications.data.ComplicationText,
+        minutes: androidx.wear.watchface.complications.data.ComplicationText,
         description: androidx.wear.watchface.complications.data.ComplicationText,
         phase: Phase,
         withTapAction: Boolean,
-    ): ComplicationData = ShortTextComplicationData.Builder(text, description)
+    ): ComplicationData = ShortTextComplicationData.Builder(hours, description)
+        .setTitle(minutes)
         // A sun or a moon rather than the words "awake"/"asleep": it reads at a glance and needs
         // no translating.
         .setMonochromaticImage(
@@ -155,16 +168,17 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
         DynamicInstant.withSecondsPrecision(Instant.ofEpochMilli(startMillis))
             .durationUntil(DynamicInstant.platformTimeWithSecondsPrecision())
 
-    /** "14h 07m" — total hours, so it keeps counting past a 24 hour day instead of wrapping. */
-    private fun durationText(elapsed: DynamicDuration): DynamicString {
+    /** "14h" — total hours, so it keeps counting past a 24 hour day instead of wrapping. */
+    private fun hoursText(elapsed: DynamicDuration): DynamicString =
+        elapsed.toIntHours().format().concat(DynamicString.constant("h"))
+
+    /** "07m" — always two digits, so the figure does not jitter as the minutes tick over. */
+    private fun minutesText(elapsed: DynamicDuration): DynamicString {
         val twoDigits = DynamicInt32.IntFormatter.Builder()
             .setMinIntegerDigits(2)
             .setGroupingUsed(false)
             .build()
-        return elapsed.toIntHours().format()
-            .concat(DynamicString.constant("h "))
-            .concat(elapsed.getMinutesPart().format(twoDigits))
-            .concat(DynamicString.constant("m"))
+        return elapsed.getMinutesPart().format(twoDigits).concat(DynamicString.constant("m"))
     }
 
     private fun settingsIntent(): PendingIntent = PendingIntent.getActivity(
@@ -176,6 +190,7 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
 
     companion object {
         /** Shown until sleep detection has seen its first wake-up. */
-        private const val WAITING = "--h --m"
+        private const val WAITING_HOURS = "--h"
+        private const val WAITING_MINUTES = "--m"
     }
 }

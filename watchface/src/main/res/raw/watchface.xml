@@ -9,13 +9,19 @@
       slot 0, WEIGHTED_ELEMENTS -> the band around the rim: the last 24 hours, one weighted
                                    segment per stretch spent awake or asleep, already coloured in
                                    the scheme the wearer picked
-      slot 1, SHORT_TEXT        -> the readout: "14h 07m" as a dynamic expression that ticks on
-                                   device, and a sun or moon for which stretch it is counting
+      slot 1, SHORT_TEXT        -> the readout, split so it can be set at two sizes: hours as the
+                                   text, minutes as the title, both dynamic expressions that tick
+                                   on device. Its monochromatic image is the sun or the moon.
       slot 2, LONG_TEXT         -> the display preferences, as a two character code: clock mode
                                    ("0" off, "1" twelve hour, "2" twenty-four hour) then date
                                    ("D" on, "-" off). The face cannot read preferences and its own
                                    configuration cannot reach back to colour the ring, so every
                                    setting travels this one way.
+
+    On the design. One accent, used once — in the band, which is the only place colour carries
+    meaning. Everything else is white at three fixed opacities, so the eye lands on the hours
+    first, the band second, and the small print only when it goes looking. The band is a hairline
+    rather than a stripe: it is a day's shape, not a gauge to be filled.
 -->
 <WatchFace width="450" height="450" clipShape="CIRCLE">
 
@@ -45,19 +51,20 @@
             <Complication type="WEIGHTED_ELEMENTS">
                 <PartDraw x="0" y="0" width="450" height="450">
                     <!-- Dimmed in ambient: the band is context, not something to keep lit. -->
-                    <Variant mode="AMBIENT" target="alpha" value="90"/>
-                    <Arc centerX="225" centerY="225" width="424" height="424" startAngle="0" endAngle="360">
+                    <Variant mode="AMBIENT" target="alpha" value="80"/>
+                    <Arc centerX="225" centerY="225" width="432" height="432" startAngle="0" endAngle="360">
                         <WeightedStroke
-                            thickness="14"
+                            thickness="8"
                             colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]"
                             weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]"/>
                     </Arc>
                 </PartDraw>
 
-                <!-- A tick at the seam, so it reads as "now" rather than as a gap. -->
+                <!-- The seam, marked by a hairline rather than a bar: enough to find "now",
+                     not enough to read as a segment of its own. -->
                 <PartDraw x="0" y="0" width="450" height="450">
-                    <Rectangle x="223" y="4" width="4" height="26">
-                        <Fill color="#ffffffff"/>
+                    <Rectangle x="224" y="0" width="2" height="18">
+                        <Fill color="#b3ffffff"/>
                     </Rectangle>
                 </PartDraw>
             </Complication>
@@ -82,16 +89,18 @@
 
             <Complication type="SHORT_TEXT">
 
-                <!-- Sun while awake, moon while asleep. The data source picks which. -->
-                <PartImage x="199" y="112" width="52" height="52">
+                <!-- Sun while awake, moon while asleep. Small, dim, and above the figure: it
+                     answers "which count is this" without competing to be read first. -->
+                <PartImage x="211" y="108" width="28" height="28" tintColor="#b3ffffff">
                     <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>
                 </PartImage>
 
-                <!-- "14h 07m" — the headline number, interactive mode -->
-                <PartText x="25" y="180" width="400" height="110" alpha="255">
+                <!-- Hours: the figure the face exists to show. Right-aligned to the centre line so
+                     it grows leftward and the pair stays balanced as the count passes 9h and 99h. -->
+                <PartText x="10" y="162" width="236" height="130" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0"/>
-                    <Text align="CENTER" ellipsis="FALSE">
-                        <Font family="SYNC_TO_DEVICE" size="84.0" weight="NORMAL" color="#ffffffff">
+                    <Text align="END" ellipsis="FALSE">
+                        <Font family="SYNC_TO_DEVICE" size="118.0" weight="NORMAL" color="#ffffffff">
                             <Template><![CDATA[%s]]>
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
                             </Template>
@@ -99,13 +108,24 @@
                     </Text>
                 </PartText>
 
-                <!-- Ambient mode: same number, thinner, so it is cheaper to keep lit -->
-                <PartText x="25" y="180" width="400" height="110" alpha="0">
+                <PartText x="10" y="162" width="236" height="130" alpha="0">
                     <Variant mode="AMBIENT" target="alpha" value="255"/>
-                    <Text align="CENTER" ellipsis="FALSE">
-                        <Font family="SYNC_TO_DEVICE" size="84.0" weight="THIN" color="#ffffffff">
+                    <Text align="END" ellipsis="FALSE">
+                        <Font family="SYNC_TO_DEVICE" size="118.0" weight="THIN" color="#ffffffff">
                             <Template><![CDATA[%s]]>
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
+                            </Template>
+                        </Font>
+                    </Text>
+                </PartText>
+
+                <!-- Minutes: detail, so half the size and two thirds the weight of white. Nudged
+                     down so the two sit on a common baseline rather than a common centre. -->
+                <PartText x="256" y="214" width="184" height="70">
+                    <Text align="START" ellipsis="FALSE">
+                        <Font family="SYNC_TO_DEVICE" size="54.0" weight="NORMAL" color="#a6ffffff">
+                            <Template><![CDATA[%s]]>
+                                <Parameter expression="[COMPLICATION.TITLE]"/>
                             </Template>
                         </Font>
                     </Text>
@@ -139,9 +159,9 @@
                     </Expressions>
 
                     <Compare expression="clock24">
-                        <PartText x="0" y="300" width="450" height="40">
+                        <PartText x="0" y="302" width="450" height="34">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="28.0" weight="THIN" color="#a6ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="26.0" weight="NORMAL" color="#73ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;HH:mm&quot;)"/>
                                     </Template>
@@ -151,9 +171,9 @@
                     </Compare>
 
                     <Compare expression="clock12">
-                        <PartText x="0" y="300" width="450" height="40">
+                        <PartText x="0" y="302" width="450" height="34">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="28.0" weight="THIN" color="#a6ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="26.0" weight="NORMAL" color="#73ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;h:mm a&quot;)"/>
                                     </Template>
@@ -164,9 +184,9 @@
 
                     <!-- Clock off: draw nothing. -->
                     <Default>
-                        <PartText x="0" y="300" width="450" height="40" alpha="0">
+                        <PartText x="0" y="302" width="450" height="34" alpha="0">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="28.0" color="#a6ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="26.0" color="#73ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="&quot;&quot;"/>
                                     </Template>
@@ -182,10 +202,10 @@
                     </Expressions>
 
                     <Compare expression="showDate">
-                        <PartText x="0" y="342" width="450" height="34">
-                            <Variant mode="AMBIENT" target="alpha" value="130"/>
+                        <PartText x="0" y="338" width="450" height="30">
+                            <Variant mode="AMBIENT" target="alpha" value="120"/>
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="24.0" weight="THIN" color="#8cffffff">
+                                <Font family="SYNC_TO_DEVICE" size="21.0" weight="NORMAL" color="#4dffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;EEE d MMM&quot;)"/>
                                     </Template>
@@ -195,9 +215,9 @@
                     </Compare>
 
                     <Default>
-                        <PartText x="0" y="342" width="450" height="34" alpha="0">
+                        <PartText x="0" y="338" width="450" height="30" alpha="0">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="24.0" color="#8cffffff">
+                                <Font family="SYNC_TO_DEVICE" size="21.0" color="#4dffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="&quot;&quot;"/>
                                     </Template>

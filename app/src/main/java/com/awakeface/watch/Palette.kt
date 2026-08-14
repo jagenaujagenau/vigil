@@ -15,10 +15,10 @@ enum class Palette(
     val awake: Int,
     val asleep: Int,
 ) {
-    AQUA("aqua", R.string.palette_aqua, Color.parseColor("#4DD0E1"), Color.parseColor("#7E6BD6")),
-    EMBER("ember", R.string.palette_ember, Color.parseColor("#FF8A65"), Color.parseColor("#5C6BC0")),
-    MEADOW("meadow", R.string.palette_meadow, Color.parseColor("#9CCC65"), Color.parseColor("#26A69A")),
-    MONO("mono", R.string.palette_mono, Color.parseColor("#E0E0E0"), Color.parseColor("#5F6368"));
+    AURORA("aurora", R.string.palette_aurora, Color.parseColor("#63E6BE"), Color.parseColor("#3B5BDB")),
+    EMBER("ember", R.string.palette_ember, Color.parseColor("#FFB25E"), Color.parseColor("#7048E8")),
+    CORAL("coral", R.string.palette_coral, Color.parseColor("#FF8787"), Color.parseColor("#0CA678")),
+    GRAPHITE("graphite", R.string.palette_graphite, Color.parseColor("#DEE2E6"), Color.parseColor("#495057"));
 
     fun colorFor(phase: Phase?): Int = when (phase) {
         Phase.AWAKE -> awake
@@ -27,10 +27,13 @@ enum class Palette(
     }
 
     companion object {
-        val DEFAULT = AQUA
+        val DEFAULT = AURORA
 
-        /** Time the watch has no record of. Deliberately the same in every scheme. */
-        val UNKNOWN: Int = Color.parseColor("#2E2E33")
+        /**
+         * Time the watch has no record of. Near black on purpose: absence should register as a
+         * quiet gap in the band, not as a third colour competing with the two that mean something.
+         */
+        val UNKNOWN: Int = Color.parseColor("#16171A")
 
         fun fromId(id: String?): Palette = entries.firstOrNull { it.id == id } ?: DEFAULT
     }

@@ -21,6 +21,10 @@ import kotlin.math.min
 /**
  * Draws time awake instead of clock time: a sun or moon, the elapsed count, and around the rim the
  * last 24 hours split into the stretches spent awake and asleep.
+ *
+ * The proportions are the same ones the Watch Face Format face uses, expressed as fractions of the
+ * radius so both look identical on any size of watch. One accent, spent on the band; everything
+ * else white at three fixed opacities, so the hours are read first and the small print last.
  */
 class AwakeRenderer(
     private val context: Context,
@@ -114,8 +118,8 @@ class AwakeRenderer(
         palette: Palette,
         ambient: Boolean,
     ) {
-        val stroke = radius * if (ambient) 0.038f else 0.062f
-        val inset = stroke / 2f + radius * 0.030f
+        val stroke = radius * if (ambient) 0.028f else 0.036f
+        val inset = stroke / 2f + radius * 0.026f
         val arc = RectF(cx - radius + inset, cy - radius + inset, cx + radius - inset, cy + radius - inset)
 
         // Butt caps, so neighbouring stretches meet exactly instead of overlapping.
@@ -138,11 +142,12 @@ class AwakeRenderer(
             }
         }
 
-        // A tick at the seam, so it reads as "now" rather than as a gap.
-        ringPaint.strokeCap = Paint.Cap.ROUND
-        ringPaint.color = if (ambient) Color.argb(120, 255, 255, 255) else Color.WHITE
-        ringPaint.strokeWidth = radius * 0.018f
-        canvas.drawLine(cx, cy - radius + inset - stroke * 0.75f, cx, cy - radius + inset + stroke * 0.75f, ringPaint)
+        // The seam, marked by a hairline rather than a bar: enough to find "now", not enough to
+        // read as a segment of its own.
+        ringPaint.strokeCap = Paint.Cap.BUTT
+        ringPaint.color = if (ambient) Color.argb(110, 255, 255, 255) else Color.argb(179, 255, 255, 255)
+        ringPaint.strokeWidth = radius * 0.009f
+        canvas.drawLine(cx, cy - radius + inset - stroke, cx, cy - radius + inset + stroke, ringPaint)
     }
 
     /** In ambient the band survives as shape only: sleep dim, awake bright, unknown invisible. */
@@ -163,15 +168,21 @@ class AwakeRenderer(
         ambient: Boolean,
     ) {
         val icon = (if (state.isAsleep) asleepIcon else awakeIcon) ?: return
-        val size = (radius * 0.20f).toInt()
-        val top = (cy - radius * 0.42f).toInt()
+        val size = (radius * 0.125f).toInt()
+        val top = (cy - radius * 0.52f).toInt()
         val left = (cx - size / 2f).toInt()
 
-        icon.setTint(if (ambient) Color.argb(150, 255, 255, 255) else palette.colorFor(state.phase))
+        // Dim white, not the accent: the colour belongs to the band, where it means something.
+        icon.setTint(Color.argb(if (ambient) 120 else 179, 255, 255, 255))
         icon.setBounds(left, top, left + size, top + size)
         icon.draw(canvas)
     }
 
+    /**
+     * "13h 02m", set as two sizes on one baseline: the hours are the figure, the minutes are
+     * detail. The split sits just right of the centre line, which shares the drift between the one
+     * and two digit cases instead of letting it all fall on the common one.
+     */
     private fun drawDuration(
         canvas: Canvas,
         cx: Float,
@@ -180,54 +191,30 @@ class AwakeRenderer(
         state: AwakeState,
         ambient: Boolean,
     ) {
-        val hours = if (state.isSet) state.hours.toString() else "--"
-        val minutes = if (state.isSet) state.minutes.toString().padStart(2, '0') else "--"
+        val hours = if (state.isSet) "${state.hours}h" else "--h"
+        val minutes = if (state.isSet) "${state.minutes.toString().padStart(2, '0')}m" else "--m"
 
-        val bigSize = radius * 0.58f
-        val unitSize = radius * 0.21f
-        val gap = radius * 0.05f
+        val split = cx + radius * 0.093f
+        val baseline = cy + radius * 0.19f
 
         textPaint.typeface = if (ambient) condensedLight else condensed
         textPaint.letterSpacing = -0.02f
+
+        textPaint.textAlign = Paint.Align.RIGHT
+        textPaint.textSize = radius * 0.525f
+        textPaint.color = Color.WHITE
+        canvas.drawText(hours, split, baseline, textPaint)
+
         textPaint.textAlign = Paint.Align.LEFT
-        textPaint.textSize = bigSize
-        val hoursWidth = textPaint.measureText(hours)
-        val minutesWidth = textPaint.measureText(minutes)
-
-        textPaint.textSize = unitSize
-        val hWidth = textPaint.measureText("h")
-        val mWidth = textPaint.measureText("m")
-
-        val totalWidth = hoursWidth + hWidth + gap * 1.6f + minutesWidth + mWidth
-        val scale = min(1f, (radius * 1.36f) / totalWidth)
-        val baseline = cy + radius * 0.14f
-        val unitColor = Color.argb(150, 255, 255, 255)
-
-        var x = cx - (totalWidth * scale) / 2f
-
-        textPaint.textSize = bigSize * scale
-        textPaint.color = Color.WHITE
-        canvas.drawText(hours, x, baseline, textPaint)
-        x += hoursWidth * scale
-
-        textPaint.textSize = unitSize * scale
-        textPaint.color = unitColor
-        canvas.drawText("h", x, baseline, textPaint)
-        x += hWidth * scale + gap * 1.6f * scale
-
-        textPaint.textSize = bigSize * scale
-        textPaint.color = Color.WHITE
-        canvas.drawText(minutes, x, baseline, textPaint)
-        x += minutesWidth * scale
-
-        textPaint.textSize = unitSize * scale
-        textPaint.color = unitColor
-        canvas.drawText("m", x, baseline, textPaint)
+        textPaint.textSize = radius * 0.24f
+        textPaint.color = Color.argb(166, 255, 255, 255)
+        canvas.drawText(minutes, split + radius * 0.044f, baseline, textPaint)
 
         textPaint.textAlign = Paint.Align.CENTER
+        textPaint.letterSpacing = 0f
     }
 
-    /** Time of day and date, each shown only if asked for. */
+    /** Time of day and date, each shown only if asked for, each dimmer than the thing above it. */
     private fun drawFooter(
         canvas: Canvas,
         cx: Float,
@@ -236,20 +223,24 @@ class AwakeRenderer(
         zonedDateTime: ZonedDateTime,
         ambient: Boolean,
     ) {
-        val parts = buildList {
-            when (store.clockMode) {
-                ClockMode.HOUR_12 -> add(zonedDateTime.format(clock12))
-                ClockMode.HOUR_24 -> add(zonedDateTime.format(clock24))
-                ClockMode.OFF -> Unit
-            }
-            if (store.showDate) add(zonedDateTime.format(dateFormat))
-        }
-        if (parts.isEmpty()) return
-
         textPaint.typeface = condensedLight
-        textPaint.textSize = radius * 0.125f
-        textPaint.color = if (ambient) Color.argb(110, 255, 255, 255) else Color.argb(160, 255, 255, 255)
-        canvas.drawText(parts.joinToString("   "), cx, cy + radius * 0.40f, textPaint)
+
+        val clock = when (store.clockMode) {
+            ClockMode.HOUR_12 -> zonedDateTime.format(clock12)
+            ClockMode.HOUR_24 -> zonedDateTime.format(clock24)
+            ClockMode.OFF -> null
+        }
+        if (clock != null) {
+            textPaint.textSize = radius * 0.116f
+            textPaint.color = Color.argb(if (ambient) 90 else 115, 255, 255, 255)
+            canvas.drawText(clock, cx, cy + radius * 0.418f, textPaint)
+        }
+
+        if (store.showDate) {
+            textPaint.textSize = radius * 0.093f
+            textPaint.color = Color.argb(if (ambient) 70 else 77, 255, 255, 255)
+            canvas.drawText(zonedDateTime.format(dateFormat), cx, cy + radius * 0.569f, textPaint)
+        }
     }
 
     companion object {

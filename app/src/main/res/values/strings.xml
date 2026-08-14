@@ -15,10 +15,10 @@
 
     <!-- Settings -->
     <string name="colours">Colours</string>
-    <string name="palette_aqua">Aqua</string>
+    <string name="palette_aurora">Aurora</string>
     <string name="palette_ember">Ember</string>
-    <string name="palette_meadow">Meadow</string>
-    <string name="palette_mono">Mono</string>
+    <string name="palette_coral">Coral</string>
+    <string name="palette_graphite">Graphite</string>
 
     <string name="clock_setting">Time: %1$s</string>
     <string name="clock_off">off</string>
