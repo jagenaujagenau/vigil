@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Awake — a watch face that reports how long you have been awake instead of the time of day.
+
+    Wear OS 6 only accepts watch faces written in the Watch Face Format, and such a package cannot
+    contain code. Everything this face knows therefore arrives as complication data from the
+    companion app (com.awakeface.watch), one type per job:
+
+      slot 0, WEIGHTED_ELEMENTS -> the band around the rim: the last 24 hours, one weighted
+                                   segment per stretch spent awake or asleep, already coloured in
+                                   the scheme the wearer picked
+      slot 1, SHORT_TEXT        -> the readout: "14h 07m" as a dynamic expression that ticks on
+                                   device, and a sun or moon for which stretch it is counting
+      slot 2, LONG_TEXT         -> the display preferences, as a two character code: clock mode
+                                   ("0" off, "1" twelve hour, "2" twenty-four hour) then date
+                                   ("D" on, "-" off). The face cannot read preferences and its own
+                                   configuration cannot reach back to colour the ring, so every
+                                   setting travels this one way.
+-->
+<WatchFace width="450" height="450" clipShape="CIRCLE">
+
+    <Metadata key="CLOCK_TYPE" value="DIGITAL"/>
+    <Metadata key="PREVIEW_TIME" value="10:08:32"/>
+
+    <Scene backgroundColor="#ff000000">
+
+        <!-- The day, drawn around the rim. The whole circle is 24 hours; the seam at the top is
+             both "a day ago" and "now", so the segment ending at the top is the stretch you are in
+             right now. -->
+        <ComplicationSlot
+            x="0" y="0" width="450" height="450"
+            slotId="0"
+            displayName="day_ring_label"
+            isCustomizable="FALSE"
+            supportedTypes="WEIGHTED_ELEMENTS EMPTY">
+
+            <BoundingOval x="0" y="0" width="450" height="450" outlinePadding="2.0"/>
+
+            <DefaultProviderPolicy
+                primaryProvider="com.awakeface.watch/com.awakeface.watch.AwakeComplicationService"
+                primaryProviderType="WEIGHTED_ELEMENTS"
+                defaultSystemProvider="EMPTY"
+                defaultSystemProviderType="EMPTY"/>
+
+            <Complication type="WEIGHTED_ELEMENTS">
+                <PartDraw x="0" y="0" width="450" height="450">
+                    <!-- Dimmed in ambient: the band is context, not something to keep lit. -->
+                    <Variant mode="AMBIENT" target="alpha" value="90"/>
+                    <Arc centerX="225" centerY="225" width="424" height="424" startAngle="0" endAngle="360">
+                        <WeightedStroke
+                            thickness="14"
+                            colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]"
+                            weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]"/>
+                    </Arc>
+                </PartDraw>
+
+                <!-- A tick at the seam, so it reads as "now" rather than as a gap. -->
+                <PartDraw x="0" y="0" width="450" height="450">
+                    <Rectangle x="223" y="4" width="4" height="26">
+                        <Fill color="#ffffffff"/>
+                    </Rectangle>
+                </PartDraw>
+            </Complication>
+        </ComplicationSlot>
+
+        <!-- The readout. Tapping anywhere opens the settings, because the companion app attaches
+             that as the complication's tap action. -->
+        <ComplicationSlot
+            x="0" y="0" width="450" height="450"
+            slotId="1"
+            displayName="awake_slot_label"
+            isCustomizable="FALSE"
+            supportedTypes="SHORT_TEXT EMPTY">
+
+            <BoundingOval x="40" y="40" width="370" height="370" outlinePadding="2.0"/>
+
+            <DefaultProviderPolicy
+                primaryProvider="com.awakeface.watch/com.awakeface.watch.AwakeComplicationService"
+                primaryProviderType="SHORT_TEXT"
+                defaultSystemProvider="EMPTY"
+                defaultSystemProviderType="EMPTY"/>
+
+            <Complication type="SHORT_TEXT">
+
+                <!-- Sun while awake, moon while asleep. The data source picks which. -->
+                <PartImage x="199" y="112" width="52" height="52">
+                    <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>
+                </PartImage>
+
+                <!-- "14h 07m" — the headline number, interactive mode -->
+                <PartText x="25" y="180" width="400" height="110" alpha="255">
+                    <Variant mode="AMBIENT" target="alpha" value="0"/>
+                    <Text align="CENTER" ellipsis="FALSE">
+                        <Font family="SYNC_TO_DEVICE" size="84.0" weight="NORMAL" color="#ffffffff">
+                            <Template><![CDATA[%s]]>
+                                <Parameter expression="[COMPLICATION.TEXT]"/>
+                            </Template>
+                        </Font>
+                    </Text>
+                </PartText>
+
+                <!-- Ambient mode: same number, thinner, so it is cheaper to keep lit -->
+                <PartText x="25" y="180" width="400" height="110" alpha="0">
+                    <Variant mode="AMBIENT" target="alpha" value="255"/>
+                    <Text align="CENTER" ellipsis="FALSE">
+                        <Font family="SYNC_TO_DEVICE" size="84.0" weight="THIN" color="#ffffffff">
+                            <Template><![CDATA[%s]]>
+                                <Parameter expression="[COMPLICATION.TEXT]"/>
+                            </Template>
+                        </Font>
+                    </Text>
+                </PartText>
+            </Complication>
+        </ComplicationSlot>
+
+        <!-- Time and date. Both are drawn inside this slot because their visibility is decided by
+             the preference code it carries, and a Condition can only branch on data in scope. -->
+        <ComplicationSlot
+            x="0" y="0" width="450" height="450"
+            slotId="2"
+            displayName="prefs_slot_label"
+            isCustomizable="FALSE"
+            supportedTypes="LONG_TEXT EMPTY">
+
+            <BoundingOval x="150" y="300" width="150" height="60" outlinePadding="2.0"/>
+
+            <DefaultProviderPolicy
+                primaryProvider="com.awakeface.watch/com.awakeface.watch.AwakeComplicationService"
+                primaryProviderType="LONG_TEXT"
+                defaultSystemProvider="EMPTY"
+                defaultSystemProviderType="EMPTY"/>
+
+            <Complication type="LONG_TEXT">
+
+                <Condition>
+                    <Expressions>
+                        <Expression name="clock24"><![CDATA[subText([COMPLICATION.TEXT], 0, 1) == "2"]]></Expression>
+                        <Expression name="clock12"><![CDATA[subText([COMPLICATION.TEXT], 0, 1) == "1"]]></Expression>
+                    </Expressions>
+
+                    <Compare expression="clock24">
+                        <PartText x="0" y="300" width="450" height="40">
+                            <Text align="CENTER">
+                                <Font family="SYNC_TO_DEVICE" size="28.0" weight="THIN" color="#a6ffffff">
+                                    <Template><![CDATA[%s]]>
+                                        <Parameter expression="icuText(&quot;HH:mm&quot;)"/>
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Compare>
+
+                    <Compare expression="clock12">
+                        <PartText x="0" y="300" width="450" height="40">
+                            <Text align="CENTER">
+                                <Font family="SYNC_TO_DEVICE" size="28.0" weight="THIN" color="#a6ffffff">
+                                    <Template><![CDATA[%s]]>
+                                        <Parameter expression="icuText(&quot;h:mm a&quot;)"/>
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Compare>
+
+                    <!-- Clock off: draw nothing. -->
+                    <Default>
+                        <PartText x="0" y="300" width="450" height="40" alpha="0">
+                            <Text align="CENTER">
+                                <Font family="SYNC_TO_DEVICE" size="28.0" color="#a6ffffff">
+                                    <Template><![CDATA[%s]]>
+                                        <Parameter expression="&quot;&quot;"/>
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Default>
+                </Condition>
+
+                <Condition>
+                    <Expressions>
+                        <Expression name="showDate"><![CDATA[subText([COMPLICATION.TEXT], 1, 2) == "D"]]></Expression>
+                    </Expressions>
+
+                    <Compare expression="showDate">
+                        <PartText x="0" y="342" width="450" height="34">
+                            <Variant mode="AMBIENT" target="alpha" value="130"/>
+                            <Text align="CENTER">
+                                <Font family="SYNC_TO_DEVICE" size="24.0" weight="THIN" color="#8cffffff">
+                                    <Template><![CDATA[%s]]>
+                                        <Parameter expression="icuText(&quot;EEE d MMM&quot;)"/>
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Compare>
+
+                    <Default>
+                        <PartText x="0" y="342" width="450" height="34" alpha="0">
+                            <Text align="CENTER">
+                                <Font family="SYNC_TO_DEVICE" size="24.0" color="#8cffffff">
+                                    <Template><![CDATA[%s]]>
+                                        <Parameter expression="&quot;&quot;"/>
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Default>
+                </Condition>
+            </Complication>
+        </ComplicationSlot>
+    </Scene>
+</WatchFace>

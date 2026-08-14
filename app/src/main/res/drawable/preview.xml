@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+
+    <path
+        android:fillColor="#000000"
+        android:pathData="M96,0 A96,96 0 1,1 95.9,0 Z" />
+
+    <!-- progress ring, roughly 3/4 of a waking day -->
+    <path
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M96,14 A82,82 0 1,1 95.9,14" />
+    <path
+        android:strokeColor="#4DD0E1"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M96,14 A82,82 0 1,1 38,154" />
+
+    <!-- "AWAKE" tick marks stand in for text in the static preview -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44,86 h34 v34 h-34 z M86,86 h10 v34 h-10 z M104,86 h34 v34 h-34 z" />
+    <path
+        android:fillColor="#99FFFFFF"
+        android:pathData="M66,64 h60 v6 h-60 z" />
+</vector>

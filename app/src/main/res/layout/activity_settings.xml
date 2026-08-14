@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <!-- Generous top and bottom padding keeps the first and last rows off the curve of a round
+         screen; the side padding does the same for the widest rows. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="56dp"
+        android:paddingBottom="56dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="#FFFFFFFF"
+            android:textSize="17sp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/app_name" />
+
+        <!-- Only shown until sleep detection has what it needs. -->
+        <LinearLayout
+            android:id="@+id/permissionCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginTop="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/permissionNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="#B3FFFFFF"
+                android:textSize="13sp"
+                android:text="@string/permission_why" />
+
+            <Button
+                android:id="@+id/permissionButton"
+                style="@style/WideButton"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#4DD0E1"
+                android:textColor="#000000"
+                android:text="@string/permission_allow" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:gravity="center"
+            android:textColor="#80FFFFFF"
+            android:textSize="12sp"
+            android:text="@string/colours" />
+
+        <LinearLayout
+            android:id="@+id/swatches"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal" />
+
+        <Button
+            android:id="@+id/clockButton"
+            style="@style/WideButton"
+            android:layout_marginTop="22dp"
+            android:text="@string/clock_setting" />
+
+        <Button
+            android:id="@+id/dateButton"
+            style="@style/WideButton"
+            android:layout_marginTop="8dp"
+            android:text="@string/date_setting" />
+
+        <Button
+            android:id="@+id/done"
+            style="@style/WideButton"
+            android:layout_marginTop="20dp"
+            android:text="@string/done" />
+    </LinearLayout>
+</ScrollView>

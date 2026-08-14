@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Crescent moon: shown while the wearer is asleep. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+
+    <!-- A disc with a second disc bitten out of it, drawn as one even-odd path. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M21.4,15.2 A9.6,9.6 0 1,1 9.1,2.4 A7.9,7.9 0 0,0 21.4,15.2 Z" />
+</vector>

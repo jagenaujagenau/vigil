@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Awake</string>
+    <string name="watch_face_name">Awake</string>
+
+    <string name="complication_label">Time awake</string>
+
+    <!-- Spoken descriptions of what the face is showing -->
+    <string name="awake_unset">Waiting for the first wake-up</string>
+    <string name="awake_for">Awake %1$dh %2$02dm</string>
+    <string name="asleep_for">Asleep %1$dh %2$02dm</string>
+    <string name="slept">slept</string>
+    <string name="ring_description">Last 24 hours, %1$d hours of it asleep</string>
+    <string name="prefs_description">Watch face display preferences</string>
+
+    <!-- Settings -->
+    <string name="colours">Colours</string>
+    <string name="palette_aqua">Aqua</string>
+    <string name="palette_ember">Ember</string>
+    <string name="palette_meadow">Meadow</string>
+    <string name="palette_mono">Mono</string>
+
+    <string name="clock_setting">Time: %1$s</string>
+    <string name="clock_off">off</string>
+    <string name="clock_12">12-hour</string>
+    <string name="clock_24">24-hour</string>
+
+    <string name="date_setting">Date: %1$s</string>
+    <string name="on">on</string>
+    <string name="off">off</string>
+
+    <string name="permission_why">Awake needs activity access to notice when you fall asleep and wake up.</string>
+    <string name="permission_allow">Allow</string>
+
+    <string name="done">Done</string>
+</resources>

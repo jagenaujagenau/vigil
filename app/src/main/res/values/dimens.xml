@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Four swatches plus their gaps have to fit across the width of a small round watch. -->
+    <dimen name="swatch_size">32dp</dimen>
+    <dimen name="swatch_gap">6dp</dimen>
+    <dimen name="swatch_stroke">3dp</dimen>
+</resources>
