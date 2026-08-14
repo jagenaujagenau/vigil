@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Awake</string>
-    <string name="watch_face_name">Awake</string>
+    <string name="app_name">Vigil</string>
+    <string name="watch_face_name">Vigil</string>
 
     <string name="complication_label">Time awake</string>
 
@@ -29,7 +29,7 @@
     <string name="on">on</string>
     <string name="off">off</string>
 
-    <string name="permission_why">Awake needs activity access to notice when you fall asleep and wake up.</string>
+    <string name="permission_why">Vigil needs activity access to notice when you fall asleep and wake up.</string>
     <string name="permission_allow">Allow</string>
 
     <string name="done">Done</string>

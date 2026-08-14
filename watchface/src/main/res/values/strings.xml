@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="watch_face_name">Awake</string>
+    <string name="watch_face_name">Vigil</string>
     <string name="awake_slot_label">Time awake</string>
     <string name="day_ring_label">Day ring</string>
     <string name="prefs_slot_label">Display preferences</string>

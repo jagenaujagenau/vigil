@@ -1,4 +1,4 @@
-# Awake — a Wear OS watch face that shows how long you've been awake
+# Vigil — a Wear OS watch face that shows how long you've been awake
 
 Instead of the time of day, the face shows elapsed time since you woke up:
 
@@ -190,10 +190,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk         # required: the
 adb install -r watchface/build/outputs/apk/debug/watchface-debug.apk
 ```
 
-Then pick **Awake** from the watch face picker: long-press the current face →
-**Add new** → **Awake**, then tap it once more to make it current.
+Then pick **Vigil** from the watch face picker: long-press the current face →
+**Add new** → **Vigil**, then tap it once more to make it current.
 
-Tapping the face opens the settings; the **Awake** app in the launcher opens the
+Tapping the face opens the settings; the **Vigil** app in the launcher opens the
 same screen. Grant the activity permission when asked and the face starts counting
 at your next wake-up.
 
@@ -240,7 +240,7 @@ set-watchface failed. FavoriteOperationException: Watch face package is not inst
 ```
 
 On a Wear OS 5 (API 34) image the Watch Face Format face *is* offered — long-press
-the current face → **Add new** → **Awake** — but the AndroidX face is still absent
+the current face → **Add new** → **Vigil** — but the AndroidX face is still absent
 from that list. Test the AndroidX path on a real Wear OS 3–5 watch.
 
 To exercise sleep detection on an emulator:
