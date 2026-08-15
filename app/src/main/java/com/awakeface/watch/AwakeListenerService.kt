@@ -35,8 +35,18 @@ class AwakeListenerService : PassiveListenerService() {
             return
         }
 
-        // Any non-asleep state ends the night, but only if we saw the night begin.
-        val asleepSince = store.asleepSinceEpochMillis ?: return
+        val asleepSince = store.asleepSinceEpochMillis
+        if (asleepSince == null) {
+            // Nothing to end — but a passive report carries the moment that state began, which on
+            // a watch that has been worn since morning is the wake-up itself. That rescues a fresh
+            // install from counting from when it was set up.
+            if (state == UserActivityState.USER_ACTIVITY_PASSIVE) {
+                AwakeDetector.adoptObservedStart(this, changedAt)
+            }
+            return
+        }
+
+        // Any non-asleep state ends the night.
         store.asleepSinceEpochMillis = null
 
         AwakeDetector.onDetectedWake(

@@ -150,11 +150,15 @@ class AwakeRenderer(
         canvas.drawLine(cx, cy - radius + inset - stroke, cx, cy - radius + inset + stroke, ringPaint)
     }
 
-    /** In ambient the band survives as shape only: sleep dim, awake bright, unknown invisible. */
+    /**
+     * In ambient the band survives as shape only: sleep dim, awake bright. Unknown time stays
+     * faintly drawn rather than dropped — on the first day the whole ring is unknown, and a band
+     * that disappears in ambient reads as a face that has died.
+     */
     private fun ambientColor(phase: Phase?): Int = when (phase) {
         Phase.AWAKE -> Color.argb(150, 255, 255, 255)
         Phase.ASLEEP -> Color.argb(60, 255, 255, 255)
-        null -> Color.TRANSPARENT
+        null -> Color.argb(22, 255, 255, 255)
     }
 
     /** A sun or a moon where a label would otherwise be: no word to read, nothing to translate. */

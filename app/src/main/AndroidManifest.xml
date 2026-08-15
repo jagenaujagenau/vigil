@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Reads the sleep the watch has already recorded, so a fresh install can start counting
+         from a real wake-up instead of from the moment it was installed. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -86,6 +90,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Where Health Connect sends people who ask why sleep access is wanted. -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
     </application>

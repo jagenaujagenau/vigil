@@ -5,7 +5,8 @@ plugins {
 
 android {
     namespace = "com.awakeface.watch"
-    compileSdk = 35
+    // Health Connect requires it; the platform and build tools for 36 are installed.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.awakeface.watch"
@@ -51,5 +52,7 @@ dependencies {
 
     // Automatic wake detection
     implementation("androidx.health:health-services-client:1.1.0-rc02")
+    // Reading the sleep the watch already recorded, so the count starts from a real wake-up
+    implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }

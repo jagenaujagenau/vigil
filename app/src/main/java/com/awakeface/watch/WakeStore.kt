@@ -22,6 +22,14 @@ class WakeStore(context: Context) {
         get() = prefs.getLong(KEY_WAKE_EPOCH, NOT_SET).takeIf { it != NOT_SET }
         set(value) = putLong(KEY_WAKE_EPOCH, value)
 
+    /**
+     * True while the wake time is only a first-run guess, not something observed. A recorded night
+     * or a detected wake-up replaces it and clears this.
+     */
+    var wakeIsProvisional: Boolean
+        get() = prefs.getBoolean(KEY_WAKE_PROVISIONAL, false)
+        set(value) = prefs.edit().putBoolean(KEY_WAKE_PROVISIONAL, value).apply()
+
     /** When the wearer fell asleep, while they still are. Null once they wake. */
     var asleepSinceEpochMillis: Long?
         get() = prefs.getLong(KEY_ASLEEP_SINCE, NOT_SET).takeIf { it != NOT_SET }
@@ -47,6 +55,11 @@ class WakeStore(context: Context) {
         get() = ClockMode.fromId(prefs.getString(KEY_CLOCK_MODE, null))
         set(value) = prefs.edit().putString(KEY_CLOCK_MODE, value.id).apply()
 
+    /** Whether the one-time Health Connect sleep request has been made. */
+    var sleepHistoryAsked: Boolean
+        get() = prefs.getBoolean(KEY_SLEEP_HISTORY_ASKED, false)
+        set(value) = prefs.edit().putBoolean(KEY_SLEEP_HISTORY_ASKED, value).apply()
+
     var showDate: Boolean
         get() = prefs.getBoolean(KEY_SHOW_DATE, true)
         set(value) = prefs.edit().putBoolean(KEY_SHOW_DATE, value).apply()
@@ -67,11 +80,13 @@ class WakeStore(context: Context) {
         const val PREFS_NAME = "awake_face_prefs"
         const val KEY_WAKE_EPOCH = "wake_epoch_millis"
         const val KEY_ASLEEP_SINCE = "asleep_since"
+        const val KEY_WAKE_PROVISIONAL = "wake_provisional"
         const val KEY_LAST_HEALTH_REPORT = "last_health_report"
         const val KEY_LAST_INTERACTION = "last_interaction"
         const val KEY_PALETTE = "palette"
         const val KEY_CLOCK_MODE = "clock_mode"
         const val KEY_SHOW_DATE = "show_date"
+        const val KEY_SLEEP_HISTORY_ASKED = "sleep_history_asked"
         private const val NOT_SET = -1L
     }
 }

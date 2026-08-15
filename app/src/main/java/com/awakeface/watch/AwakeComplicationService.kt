@@ -45,8 +45,10 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
         // This service is the only code that runs on the Watch Face Format path, so it is also
-        // where background sleep detection gets (re)registered.
+        // where background sleep detection gets (re)registered and where a recorded night gets
+        // picked up.
         AwakeDetector.start(this)
+        AwakeDetector.refineFromHistory(this)
 
         return when (request.complicationType) {
             ComplicationType.WEIGHTED_ELEMENTS -> dayRing(System.currentTimeMillis())

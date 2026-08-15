@@ -30,10 +30,12 @@ enum class Palette(
         val DEFAULT = AURORA
 
         /**
-         * Time the watch has no record of. Near black on purpose: absence should register as a
-         * quiet gap in the band, not as a third colour competing with the two that mean something.
+         * Time the watch has no record of. Dark enough to stay out of the way of the two colours
+         * that mean something, but not so dark it disappears: on the first day the whole ring is
+         * unknown, and a band that cannot be seen at all reads as a broken face rather than as an
+         * honest "nothing recorded yet".
          */
-        val UNKNOWN: Int = Color.parseColor("#16171A")
+        val UNKNOWN: Int = Color.parseColor("#25272C")
 
         fun fromId(id: String?): Palette = entries.firstOrNull { it.id == id } ?: DEFAULT
     }

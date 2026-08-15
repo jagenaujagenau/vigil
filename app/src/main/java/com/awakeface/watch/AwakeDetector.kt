@@ -32,6 +32,9 @@ object AwakeDetector {
     /** If Health Services has said nothing for this long, assume it is not going to. */
     private val HEALTH_SERVICES_SILENT: Duration = Duration.ofHours(36)
 
+    /** An adopted stretch older than this is stale history, not the morning just gone. */
+    private val MAX_ADOPTED_AGE: Duration = Duration.ofHours(20)
+
     /** Don't rewrite the "last seen awake" timestamp more often than this. */
     private const val INTERACTION_WRITE_INTERVAL_MILLIS = 60_000L
 
@@ -43,7 +46,31 @@ object AwakeDetector {
      * Starts (or restarts) passive monitoring. Safe to call repeatedly — Health Services replaces
      * any previous registration for this app.
      */
+    /**
+     * Gives the face something to count on a watch that has not yet seen a wake-up.
+     *
+     * Detection only ever fires on a *transition*, so a fresh install would otherwise show nothing
+     * at all until the wearer's next morning — a day of a dead face. Someone setting up a watch
+     * face is almost certainly awake, so the count starts from now and the first real wake-up
+     * replaces it. Everything before this moment stays unknown on the ring, which is the honest
+     * way to say the watch was not there for it.
+     */
+    fun ensureCounting(context: Context) {
+        val store = WakeStore(context)
+        if (store.wakeEpochMillis != null || store.asleepSinceEpochMillis != null) return
+
+        val now = System.currentTimeMillis()
+        store.wakeEpochMillis = now
+        store.wakeIsProvisional = true
+        SleepLog(context).record(Phase.AWAKE, now)
+        Log.i(TAG, "no wake-up on record; counting from first run until a real one turns up")
+    }
+
     fun start(context: Context) {
+        // Before the permission check: the face should count even where detection cannot run, and
+        // the screen-gap fallback can still correct it later.
+        ensureCounting(context)
+
         if (!hasPermission(context)) return
 
         val config = PassiveListenerConfig.builder()
@@ -100,6 +127,7 @@ object AwakeDetector {
         // A rejected nap still ends the sleep count, so the face needs refreshing either way.
         if (shouldStartNewDay(store, wokeAt, sleptFor)) {
             store.wakeEpochMillis = wokeAt.toEpochMilli()
+            store.wakeIsProvisional = false
             Log.i(TAG, "detected wake-up at $wokeAt")
         }
         requestFaceUpdate(context)
@@ -119,6 +147,57 @@ object AwakeDetector {
             return false
         }
         return true
+    }
+
+    /**
+     * Adopts the start of the wearer's current non-asleep stretch as the wake-up.
+     *
+     * Health Services stamps every report with the instant that state began, so the first report
+     * after installing already knows when the wearer stopped being asleep — hours before the face
+     * existed. Only used to replace a first-run guess, and only if it is recent enough to be
+     * today's waking, so it can never overwrite a wake-up that was properly observed.
+     */
+    fun adoptObservedStart(context: Context, startedAt: Instant) {
+        val store = WakeStore(context)
+        if (!store.wakeIsProvisional) return
+
+        val now = System.currentTimeMillis()
+        val startMillis = startedAt.toEpochMilli()
+        if (startMillis > now || now - startMillis > MAX_ADOPTED_AGE.toMillis()) return
+
+        store.wakeEpochMillis = startMillis
+        store.wakeIsProvisional = false
+        SleepLog(context).record(Phase.AWAKE, startMillis)
+
+        Log.i(TAG, "adopted observed wake-up at $startedAt")
+        requestFaceUpdate(context)
+    }
+
+    /**
+     * Replaces a first-run guess with the night the watch actually recorded.
+     *
+     * Nothing to do once the wake time is a real observation, so this costs one preference read on
+     * every call after the first success.
+     */
+    suspend fun refineFromHistory(context: Context) {
+        val store = WakeStore(context)
+        if (!store.wakeIsProvisional || store.asleepSinceEpochMillis != null) return
+
+        val now = System.currentTimeMillis()
+        val sleep = SleepHistory.lastSleep(context, now) ?: return
+        val wokeAt = sleep.end.toEpochMilli()
+        if (wokeAt > now) return
+
+        store.wakeEpochMillis = wokeAt
+        store.wakeIsProvisional = false
+
+        // Log both ends, so the ring shows the night rather than starting at the install.
+        val log = SleepLog(context)
+        log.record(Phase.ASLEEP, sleep.start.toEpochMilli())
+        log.record(Phase.AWAKE, wokeAt)
+
+        Log.i(TAG, "recorded night ${sleep.start}..${sleep.end}; counting from its end")
+        requestFaceUpdate(context)
     }
 
     /** Pushes the current numbers to whichever watch face is showing them. */

@@ -42,6 +42,8 @@ class AwakeWatchFaceService : WatchFaceService() {
 
         // Detection has to be live even if the user never opens the settings screen.
         AwakeDetector.start(applicationContext)
+        // And if the watch already recorded last night, start from that rather than from install.
+        AwakeDetector.refineFromHistory(applicationContext)
 
         val awakeRenderer = AwakeRenderer(
             context = applicationContext,

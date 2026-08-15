@@ -2,6 +2,7 @@ package com.awakeface.watch
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -55,6 +56,7 @@ class SettingsActivity : Activity() {
         if (!AwakeDetector.hasPermission(this)) {
             requestActivityRecognition()
         }
+        askForSleepHistoryOnce()
     }
 
     override fun onResume() {
@@ -82,6 +84,26 @@ class SettingsActivity : Activity() {
 
     private fun requestActivityRecognition() {
         requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), REQUEST_ACTIVITY_RECOGNITION)
+    }
+
+    /**
+     * Asks Health Connect for read access to sleep, once, on first run.
+     *
+     * This is what lets a fresh install start from the night you actually had rather than from the
+     * moment you installed it. It is a nicety, not a requirement — refuse it and the face still
+     * works, it just takes until tomorrow morning to be right.
+     */
+    private fun askForSleepHistoryOnce() {
+        if (store.sleepHistoryAsked || !SleepHistory.isAvailable(this)) return
+        store.sleepHistoryAsked = true
+
+        runCatching {
+            startActivity(
+                Intent(HEALTH_PERMISSIONS_ACTION)
+                    .putExtra(EXTRA_REQUEST_PERMISSIONS, SleepHistory.PERMISSIONS.toTypedArray())
+                    .putExtra(EXTRA_CALLING_PACKAGE, packageName)
+            )
+        }
     }
 
     /** One tappable disc per scheme, each showing the two colours that scheme actually draws. */
@@ -146,5 +168,8 @@ class SettingsActivity : Activity() {
 
     companion object {
         private const val REQUEST_ACTIVITY_RECOGNITION = 1
+        private const val HEALTH_PERMISSIONS_ACTION = "androidx.health.ACTION_REQUEST_PERMISSIONS"
+        private const val EXTRA_REQUEST_PERMISSIONS = "androidx.health.EXTRA_REQUEST_PERMISSIONS"
+        private const val EXTRA_CALLING_PACKAGE = "androidx.health.EXTRA_CALLING_PACKAGE"
     }
 }
