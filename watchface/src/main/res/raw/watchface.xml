@@ -60,15 +60,64 @@
                     </Arc>
                 </PartDraw>
 
-                <!-- The seam, marked by a hairline rather than a bar: enough to find "now",
-                     not enough to read as a segment of its own. -->
-                <PartDraw x="0" y="0" width="450" height="450">
-                    <Rectangle x="224" y="0" width="2" height="18">
-                        <Fill color="#b3ffffff"/>
-                    </Rectangle>
-                </PartDraw>
             </Complication>
         </ComplicationSlot>
+
+
+        <!-- The dial the band is read against: midnight at the top, noon at the bottom, quarter
+             marks between, and a hairline for "now" that travels round once a day.
+
+             A conventional analog clock here would disagree with everything around it — a 12 hour
+             hand against a 24 hour band — so the reference is given as marks and two numbers
+             instead. The numbers alone declare the scale: once the top is 00 and the bottom is 12,
+             every other angle follows. -->
+        <Group name="dial" x="0" y="0" width="450" height="450">
+
+            <PartDraw x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="0">
+                <Rectangle x="223.5" y="21" width="3" height="12">
+                    <Fill color="#69ffffff"/>
+                </Rectangle>
+            </PartDraw>
+            <PartDraw x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="90">
+                <Rectangle x="223.5" y="21" width="3" height="12">
+                    <Fill color="#37ffffff"/>
+                </Rectangle>
+            </PartDraw>
+            <PartDraw x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="180">
+                <Rectangle x="223.5" y="21" width="3" height="12">
+                    <Fill color="#37ffffff"/>
+                </Rectangle>
+            </PartDraw>
+            <PartDraw x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="270">
+                <Rectangle x="223.5" y="21" width="3" height="12">
+                    <Fill color="#37ffffff"/>
+                </Rectangle>
+            </PartDraw>
+
+            <PartText x="0" y="28" width="450" height="30">
+                <Text align="CENTER">
+                    <Font family="SYNC_TO_DEVICE" size="18.5" color="#4bffffff">
+                        <Template><![CDATA[%s]]><Parameter expression="&quot;00&quot;"/></Template>
+                    </Font>
+                </Text>
+            </PartText>
+
+            <PartText x="0" y="392" width="450" height="30">
+                <Text align="CENTER">
+                    <Font family="SYNC_TO_DEVICE" size="18.5" color="#4bffffff">
+                        <Template><![CDATA[%s]]><Parameter expression="&quot;12&quot;"/></Template>
+                    </Font>
+                </Text>
+            </PartText>
+
+            <!-- "Now": the whole day is 1440 minutes, so the angle is simply how far through it is. -->
+            <PartDraw x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
+                <Rectangle x="224" y="2" width="2" height="16">
+                    <Fill color="#b3ffffff"/>
+                </Rectangle>
+                <Transform target="angle" value="((([HOUR_0_23] * 60) + [MINUTE]) / 1440) * 360"/>
+            </PartDraw>
+        </Group>
 
         <!-- The readout. Tapping anywhere opens the settings, because the companion app attaches
              that as the complication's tap action. -->

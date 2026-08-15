@@ -72,6 +72,9 @@ class SettingsActivity : ComponentActivity() {
         // Looking at this screen is proof of being awake, which is the fallback signal on watches
         // where Health Services never reports sleep.
         AwakeDetector.noteAwakeInteraction(this, System.currentTimeMillis())
+        // Push what the face is showing whenever this screen opens, not only when something is
+        // changed here: detection may have moved the numbers on while the face sat on cached data.
+        AwakeDetector.requestFaceUpdate(this)
     }
 
     /**

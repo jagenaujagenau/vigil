@@ -143,6 +143,8 @@ class AwakeRenderer(
             }
         }
 
+        drawHourMarks(canvas, cx, cy, radius, inset, stroke, ambient)
+
         // "Now", as a hairline across the band: enough to find, not enough to read as a segment.
         ringPaint.strokeCap = Paint.Cap.BUTT
         ringPaint.color = if (ambient) Color.argb(110, 255, 255, 255) else Color.argb(179, 255, 255, 255)
@@ -152,6 +154,54 @@ class AwakeRenderer(
         canvas.rotate(360f * DayRing.fractionOfDay(nowMillis), cx, cy)
         canvas.drawLine(cx, cy - radius + inset - stroke, cx, cy - radius + inset + stroke, ringPaint)
         canvas.restore()
+    }
+
+    /**
+     * Quarter marks just inside the band, at midnight, 06:00, noon and 18:00.
+     *
+     * The band is a *24 hour* dial, so a conventional analog clock inside it would disagree with
+     * everything around it — the hand would sit at one angle while the same hour on the band sat at
+     * another. Four marks give the same reference without the contradiction: find noon at the
+     * bottom and the night reads itself. Midnight is brightest, since that is where the day starts.
+     */
+    private fun drawHourMarks(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        radius: Float,
+        inset: Float,
+        stroke: Float,
+        ambient: Boolean,
+    ) {
+        if (ambient) return
+
+        val outer = cy - radius + inset + stroke / 2f + radius * 0.030f
+        val length = radius * 0.055f
+
+        ringPaint.strokeCap = Paint.Cap.ROUND
+        ringPaint.strokeWidth = radius * 0.012f
+
+        for (quarter in 0..3) {
+            ringPaint.color = if (quarter == 0) Color.argb(105, 255, 255, 255) else Color.argb(55, 255, 255, 255)
+            canvas.save()
+            canvas.rotate(quarter * 90f, cx, cy)
+            canvas.drawLine(cx, outer, cx, outer + length, ringPaint)
+            canvas.restore()
+        }
+
+        // Midnight and noon, named. Two numbers are enough to declare the whole scale — once the
+        // top is 00 and the bottom is 12, every other angle follows — and they go top and bottom
+        // where nothing else is competing for the space. Written the 24 hour way whatever the
+        // clock is set to, because the dial itself is a 24 hour one.
+        textPaint.typeface = condensedLight
+        textPaint.textSize = radius * 0.082f
+        textPaint.color = Color.argb(75, 255, 255, 255)
+
+        // Inside the quarter ticks, which reach down to about 0.85 of the radius.
+        val labelRadius = radius * 0.808f
+        val half = textPaint.textSize * 0.36f
+        canvas.drawText("00", cx, cy - labelRadius + half, textPaint)
+        canvas.drawText("12", cx, cy + labelRadius + half, textPaint)
     }
 
     /**
