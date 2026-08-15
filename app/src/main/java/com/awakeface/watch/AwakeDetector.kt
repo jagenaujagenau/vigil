@@ -159,11 +159,17 @@ object AwakeDetector {
      */
     fun adoptObservedStart(context: Context, startedAt: Instant) {
         val store = WakeStore(context)
-        if (!store.wakeIsProvisional) return
 
         val now = System.currentTimeMillis()
         val startMillis = startedAt.toEpochMilli()
         if (startMillis > now || now - startMillis > MAX_ADOPTED_AGE.toMillis()) return
+
+        // Take it if the stored time is only a guess, and also whenever the watch observed the
+        // stretch starting *earlier* than what we hold — a properly detected wake-up is the same
+        // instant this stretch began, never later, so this can only ever correct backwards onto
+        // the truth. That also repairs installs whose guess predates the provisional flag.
+        val stored = store.wakeEpochMillis
+        if (!store.wakeIsProvisional && stored != null && startMillis >= stored) return
 
         store.wakeEpochMillis = startMillis
         store.wakeIsProvisional = false
