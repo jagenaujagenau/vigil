@@ -27,16 +27,24 @@ class SleepLog(context: Context) {
 
     private data class Transition(val atMillis: Long, val phase: Phase)
 
-    /** Appends a transition, unless it repeats the phase the wearer is already in. */
+    /**
+     * Records a transition at [atMillis], which need not be later than everything already logged —
+     * a wake-up learned after the fact lands behind entries written at first run.
+     *
+     * Redundancy is therefore judged in time order rather than against whatever was written last:
+     * once sorted, any entry repeating the phase before it is not a transition at all and is
+     * dropped. That is also what retires a first-run guess when the real wake-up turns up in front
+     * of it.
+     */
     fun record(phase: Phase, atMillis: Long) {
-        val existing = read()
-        if (existing.lastOrNull()?.phase == phase) return
-
-        val updated = (existing + Transition(atMillis, phase))
+        val merged = (read().filterNot { it.atMillis == atMillis } + Transition(atMillis, phase))
             .sortedBy { it.atMillis }
-            .let { prune(it, atMillis) }
 
-        prefs.edit().putString(KEY_LOG, encode(updated)).apply()
+        val collapsed = merged.filterIndexed { i, t -> i == 0 || merged[i - 1].phase != t.phase }
+        if (collapsed == read()) return
+
+        val latest = maxOf(atMillis, collapsed.lastOrNull()?.atMillis ?: atMillis)
+        prefs.edit().putString(KEY_LOG, encode(prune(collapsed, latest))).apply()
     }
 
     /**

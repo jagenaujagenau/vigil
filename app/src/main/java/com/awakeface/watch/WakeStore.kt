@@ -51,9 +51,13 @@ class WakeStore(context: Context) {
         get() = Palette.fromId(prefs.getString(KEY_PALETTE, null))
         set(value) = prefs.edit().putString(KEY_PALETTE, value.id).apply()
 
-    var clockMode: ClockMode
-        get() = ClockMode.fromId(prefs.getString(KEY_CLOCK_MODE, null))
-        set(value) = prefs.edit().putString(KEY_CLOCK_MODE, value.id).apply()
+    var showClock: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_CLOCK, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_CLOCK, value).apply()
+
+    var use24Hour: Boolean
+        get() = prefs.getBoolean(KEY_USE_24_HOUR, false)
+        set(value) = prefs.edit().putBoolean(KEY_USE_24_HOUR, value).apply()
 
     /** Whether the one-time Health Connect sleep request has been made. */
     var sleepHistoryAsked: Boolean
@@ -84,7 +88,8 @@ class WakeStore(context: Context) {
         const val KEY_LAST_HEALTH_REPORT = "last_health_report"
         const val KEY_LAST_INTERACTION = "last_interaction"
         const val KEY_PALETTE = "palette"
-        const val KEY_CLOCK_MODE = "clock_mode"
+        const val KEY_SHOW_CLOCK = "show_clock"
+        const val KEY_USE_24_HOUR = "use_24_hour"
         const val KEY_SHOW_DATE = "show_date"
         const val KEY_SLEEP_HISTORY_ASKED = "sleep_history_asked"
         private const val NOT_SET = -1L

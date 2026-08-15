@@ -173,7 +173,17 @@ object AwakeDetector {
 
         store.wakeEpochMillis = startMillis
         store.wakeIsProvisional = false
-        SleepLog(context).record(Phase.AWAKE, startMillis)
+
+        val log = SleepLog(context)
+        // Waking implies having been asleep. Health Services will not say when that sleep began,
+        // but the ring only needs today, so treat the wearer as having been asleep from midnight
+        // until the wake-up. Health Connect replaces this with the real start where it can, and
+        // tomorrow's transitions are observed properly rather than inferred.
+        val dayStart = DayRing.startOfDay(startMillis)
+        if (dayStart < startMillis) {
+            log.record(Phase.ASLEEP, dayStart)
+        }
+        log.record(Phase.AWAKE, startMillis)
 
         Log.i(TAG, "adopted observed wake-up at $startedAt")
         requestFaceUpdate(context)

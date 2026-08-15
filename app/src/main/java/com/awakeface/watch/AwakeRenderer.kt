@@ -106,8 +106,9 @@ class AwakeRenderer(
     // --- pieces -------------------------------------------------------------------------------
 
     /**
-     * The day around the rim: the last 24 hours, one arc per stretch spent awake or asleep. The
-     * whole circle is the window, so the seam at the top is both "a day ago" and "now".
+     * The day around the rim: today, midnight at the top, one arc per stretch spent awake or
+     * asleep. Position on the band is a time of day, so the night sits where the night was, and
+     * the marker showing "now" travels round as the day is lived.
      */
     private fun drawDayRing(
         canvas: Canvas,
@@ -135,30 +136,34 @@ class AwakeRenderer(
             var angle = START_ANGLE
             for (segment in segments) {
                 val sweep = 360f * (segment.weight / total)
-                ringPaint.color = if (ambient) ambientColor(segment.phase) else segment.color
+                ringPaint.color = if (ambient) ambientColor(segment) else segment.color
                 // Overdraw by a hair: exact abutment leaves seams once anti-aliasing rounds down.
                 canvas.drawArc(arc, angle, sweep + 0.4f, false, ringPaint)
                 angle += sweep
             }
         }
 
-        // The seam, marked by a hairline rather than a bar: enough to find "now", not enough to
-        // read as a segment of its own.
+        // "Now", as a hairline across the band: enough to find, not enough to read as a segment.
         ringPaint.strokeCap = Paint.Cap.BUTT
         ringPaint.color = if (ambient) Color.argb(110, 255, 255, 255) else Color.argb(179, 255, 255, 255)
         ringPaint.strokeWidth = radius * 0.009f
+
+        canvas.save()
+        canvas.rotate(360f * DayRing.fractionOfDay(nowMillis), cx, cy)
         canvas.drawLine(cx, cy - radius + inset - stroke, cx, cy - radius + inset + stroke, ringPaint)
+        canvas.restore()
     }
 
     /**
-     * In ambient the band survives as shape only: sleep dim, awake bright. Unknown time stays
-     * faintly drawn rather than dropped — on the first day the whole ring is unknown, and a band
-     * that disappears in ambient reads as a face that has died.
+     * In ambient the band survives as shape only: sleep dim, awake bright. Time with no record
+     * stays faintly drawn rather than dropped — on the first day most of the ring is unrecorded,
+     * and a band that disappears in ambient reads as a face that has died.
      */
-    private fun ambientColor(phase: Phase?): Int = when (phase) {
-        Phase.AWAKE -> Color.argb(150, 255, 255, 255)
-        Phase.ASLEEP -> Color.argb(60, 255, 255, 255)
-        null -> Color.argb(22, 255, 255, 255)
+    private fun ambientColor(segment: RingSegment): Int = when {
+        segment.color == Palette.FUTURE -> Color.argb(10, 255, 255, 255)
+        segment.phase == Phase.AWAKE -> Color.argb(150, 255, 255, 255)
+        segment.phase == Phase.ASLEEP -> Color.argb(60, 255, 255, 255)
+        else -> Color.argb(22, 255, 255, 255)
     }
 
     /** A sun or a moon where a label would otherwise be: no word to read, nothing to translate. */
@@ -229,12 +234,8 @@ class AwakeRenderer(
     ) {
         textPaint.typeface = condensedLight
 
-        val clock = when (store.clockMode) {
-            ClockMode.HOUR_12 -> zonedDateTime.format(clock12)
-            ClockMode.HOUR_24 -> zonedDateTime.format(clock24)
-            ClockMode.OFF -> null
-        }
-        if (clock != null) {
+        if (store.showClock) {
+            val clock = zonedDateTime.format(if (store.use24Hour) clock24 else clock12)
             textPaint.textSize = radius * 0.116f
             textPaint.color = Color.argb(if (ambient) 90 else 115, 255, 255, 255)
             canvas.drawText(clock, cx, cy + radius * 0.418f, textPaint)

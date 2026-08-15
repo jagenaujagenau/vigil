@@ -155,8 +155,12 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
      */
     private fun displayPreferences(): ComplicationData {
         val store = WakeStore(this)
-        val code = store.clockMode.id.take(1).let { if (store.clockMode == ClockMode.OFF) "0" else it } +
-            if (store.showDate) "D" else "-"
+        val clock = when {
+            !store.showClock -> "0"
+            store.use24Hour -> "2"
+            else -> "1"
+        }
+        val code = clock + if (store.showDate) "D" else "-"
 
         return LongTextComplicationData.Builder(
             text = PlainComplicationText.Builder(code).build(),

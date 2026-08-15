@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -18,7 +19,14 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Debug builds are debuggable, which stops ART optimising them ahead of time, and ship
+            // every library unshrunk. On a watch that is the difference between a face that feels
+            // instant and one that does not.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Signed with the debug key so it can be sideloaded for testing.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -32,7 +40,7 @@ android {
     }
 
     buildFeatures {
-        viewBinding = true
+        compose = true
     }
 }
 
@@ -41,6 +49,11 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.wear:wear:1.3.0")
+
+    // Settings are built from the current Wear OS components
+    implementation("androidx.wear.compose:compose-material3:1.6.2")
+    implementation("androidx.wear.compose:compose-foundation:1.6.2")
+    implementation("androidx.activity:activity-compose:1.9.3")
 
     // Watch face (AndroidX / Jetpack)
     implementation("androidx.wear.watchface:watchface:1.2.1")

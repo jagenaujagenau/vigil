@@ -1,17 +1,44 @@
 package com.awakeface.watch
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.EdgeButton
+import androidx.wear.compose.material3.ListHeader
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SwitchButton
+import androidx.wear.compose.material3.Text
 
 /**
  * The whole of the face's settings: how it looks.
@@ -20,43 +47,23 @@ import android.widget.TextView
  * entered — so the only thing this screen does besides appearance is ask for the permission that
  * makes the observing possible.
  */
-class SettingsActivity : Activity() {
-
-    private lateinit var store: WakeStore
-    private lateinit var swatches: LinearLayout
-    private lateinit var clockButton: Button
-    private lateinit var dateButton: Button
-    private lateinit var permissionCard: View
-    private lateinit var permissionButton: Button
-    private lateinit var permissionNote: TextView
+class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
+        val store = WakeStore(this)
 
-        store = WakeStore(this)
-        swatches = findViewById(R.id.swatches)
-        clockButton = findViewById(R.id.clockButton)
-        dateButton = findViewById(R.id.dateButton)
-        permissionCard = findViewById(R.id.permissionCard)
-        permissionButton = findViewById(R.id.permissionButton)
-        permissionNote = findViewById(R.id.permissionNote)
-
-        buildSwatches()
-
-        clockButton.setOnClickListener { cycleClockMode() }
-        dateButton.setOnClickListener {
-            store.showDate = !store.showDate
-            refresh()
+        setContent {
+            SettingsScreen(
+                store = store,
+                hasActivityPermission = { AwakeDetector.hasPermission(this) },
+                onPermissionGranted = { AwakeDetector.start(this) },
+                onChanged = { AwakeDetector.requestFaceUpdate(this) },
+                onDone = { finish() },
+            )
         }
-        permissionButton.setOnClickListener { requestActivityRecognition() }
-        findViewById<Button>(R.id.done).setOnClickListener { finish() }
 
-        // Asked once, on the way in, because without it the face has nothing to show.
-        if (!AwakeDetector.hasPermission(this)) {
-            requestActivityRecognition()
-        }
-        askForSleepHistoryOnce()
+        askForSleepHistoryOnce(store)
     }
 
     override fun onResume() {
@@ -65,35 +72,15 @@ class SettingsActivity : Activity() {
         // Looking at this screen is proof of being awake, which is the fallback signal on watches
         // where Health Services never reports sleep.
         AwakeDetector.noteAwakeInteraction(this, System.currentTimeMillis())
-        refresh()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQUEST_ACTIVITY_RECOGNITION) return
-
-        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            AwakeDetector.start(this)
-        }
-        refresh()
-    }
-
-    private fun requestActivityRecognition() {
-        requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), REQUEST_ACTIVITY_RECOGNITION)
     }
 
     /**
      * Asks Health Connect for read access to sleep, once, on first run.
      *
-     * This is what lets a fresh install start from the night you actually had rather than from the
-     * moment you installed it. It is a nicety, not a requirement — refuse it and the face still
-     * works, it just takes until tomorrow morning to be right.
+     * This is what lets a fresh install draw the night you actually had rather than inferring it.
+     * A nicety, not a requirement — refuse it and the face still works.
      */
-    private fun askForSleepHistoryOnce() {
+    private fun askForSleepHistoryOnce(store: WakeStore) {
         if (store.sleepHistoryAsked || !SleepHistory.isAvailable(this)) return
         store.sleepHistoryAsked = true
 
@@ -106,70 +93,161 @@ class SettingsActivity : Activity() {
         }
     }
 
-    /** One tappable disc per scheme, each showing the two colours that scheme actually draws. */
-    private fun buildSwatches() {
-        val size = resources.getDimensionPixelSize(R.dimen.swatch_size)
-        val gap = resources.getDimensionPixelSize(R.dimen.swatch_gap)
-
-        Palette.entries.forEach { palette ->
-            val swatch = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                    marginStart = gap / 2
-                    marginEnd = gap / 2
-                }
-                contentDescription = getString(palette.labelRes)
-                setOnClickListener {
-                    store.palette = palette
-                    refresh()
-                }
-            }
-            swatches.addView(swatch)
-        }
-    }
-
-    private fun cycleClockMode() {
-        val modes = ClockMode.entries
-        store.clockMode = modes[(modes.indexOf(store.clockMode) + 1) % modes.size]
-        refresh()
-    }
-
-    private fun refresh() {
-        val selected = store.palette
-        Palette.entries.forEachIndexed { index, palette ->
-            val view = swatches.getChildAt(index) ?: return@forEachIndexed
-            view.background = swatchDrawable(palette, selected = palette == selected)
-        }
-
-        clockButton.text = getString(R.string.clock_setting, getString(store.clockMode.labelRes))
-        dateButton.text = getString(
-            R.string.date_setting,
-            getString(if (store.showDate) R.string.on else R.string.off),
-        )
-
-        val granted = AwakeDetector.hasPermission(this)
-        permissionCard.visibility = if (granted) View.GONE else View.VISIBLE
-        permissionNote.setText(R.string.permission_why)
-
-        // Preferences reach the face through complication data, so push them out now.
-        AwakeDetector.requestFaceUpdate(this)
-    }
-
-    /** Half awake colour, half asleep colour, ringed when it is the one in use. */
-    private fun swatchDrawable(palette: Palette, selected: Boolean): GradientDrawable =
-        GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(palette.awake, palette.awake, palette.asleep, palette.asleep),
-        ).apply {
-            shape = GradientDrawable.OVAL
-            if (selected) {
-                setStroke(resources.getDimensionPixelSize(R.dimen.swatch_stroke), Color.WHITE)
-            }
-        }
-
     companion object {
-        private const val REQUEST_ACTIVITY_RECOGNITION = 1
         private const val HEALTH_PERMISSIONS_ACTION = "androidx.health.ACTION_REQUEST_PERMISSIONS"
         private const val EXTRA_REQUEST_PERMISSIONS = "androidx.health.EXTRA_REQUEST_PERMISSIONS"
         private const val EXTRA_CALLING_PACKAGE = "androidx.health.EXTRA_CALLING_PACKAGE"
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    store: WakeStore,
+    hasActivityPermission: () -> Boolean,
+    onPermissionGranted: () -> Unit,
+    onChanged: () -> Unit,
+    onDone: () -> Unit,
+) {
+    MaterialTheme {
+        var palette by remember { mutableStateOf(store.palette) }
+        var showClock by remember { mutableStateOf(store.showClock) }
+        var use24Hour by remember { mutableStateOf(store.use24Hour) }
+        var showDate by remember { mutableStateOf(store.showDate) }
+        var granted by remember { mutableStateOf(hasActivityPermission()) }
+
+        val requestPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { allowed ->
+            granted = allowed
+            if (allowed) onPermissionGranted()
+        }
+
+        // Asked on the way in, because without it the face has nothing to show.
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            if (!granted) requestPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+
+        val listState = rememberScalingLazyListState()
+
+        AppScaffold {
+            ScreenScaffold(
+                scrollState = listState,
+                // The bottom-hugging button Wear uses to close a settings screen.
+                edgeButton = {
+                    EdgeButton(onClick = onDone) { Text(stringResource(R.string.done)) }
+                },
+            ) { contentPadding ->
+                ScalingLazyColumn(
+                    state = listState,
+                    contentPadding = contentPadding,
+                    // Room to breathe between rows; a watch list is read at arm's length.
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    item { ListHeader { Text(stringResource(R.string.app_name)) } }
+
+                    if (!granted) {
+                        item {
+                            Button(
+                                onClick = { requestPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.permission_allow)) },
+                                secondaryLabel = { Text(stringResource(R.string.permission_why_short)) },
+                            )
+                        }
+                    }
+
+                    item { ListHeader { Text(stringResource(R.string.colours)) } }
+
+                    item {
+                        PaletteRow(
+                            selected = palette,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        ) {
+                            palette = it
+                            store.palette = it
+                            onChanged()
+                        }
+                    }
+
+                    item {
+                        SwitchButton(
+                            checked = showClock,
+                            onCheckedChange = {
+                                showClock = it
+                                store.showClock = it
+                                onChanged()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.setting_time)) },
+                        )
+                    }
+
+                    item {
+                        SwitchButton(
+                            checked = use24Hour,
+                            onCheckedChange = {
+                                use24Hour = it
+                                store.use24Hour = it
+                                onChanged()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            // Meaningless with the clock hidden, so it says so rather than lying.
+                            enabled = showClock,
+                            label = { Text(stringResource(R.string.setting_24_hour)) },
+                        )
+                    }
+
+                    item {
+                        SwitchButton(
+                            checked = showDate,
+                            onCheckedChange = {
+                                showDate = it
+                                store.showDate = it
+                                onChanged()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.setting_date)) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One tappable disc per scheme, each showing the two colours that scheme actually draws. */
+@Composable
+private fun PaletteRow(
+    selected: Palette,
+    modifier: Modifier = Modifier,
+    onPick: (Palette) -> Unit,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+    ) {
+        Palette.entries.forEach { palette ->
+            val isSelected = palette == selected
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            0.0f to Color(palette.awake),
+                            0.5f to Color(palette.awake),
+                            0.5f to Color(palette.asleep),
+                            1.0f to Color(palette.asleep),
+                        )
+                    )
+                    .border(
+                        BorderStroke(if (isSelected) 3.dp else 0.dp, Color.White),
+                        CircleShape,
+                    )
+                    .clickable { onPick(palette) }
+                    .padding(2.dp)
+            )
+        }
     }
 }

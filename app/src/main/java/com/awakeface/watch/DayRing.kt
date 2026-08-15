@@ -1,17 +1,19 @@
 package com.awakeface.watch
 
+import java.time.Instant
+import java.time.ZoneId
+
 /** One arc of the ring: how much of the day it covers, and what colour it is drawn in. */
 data class RingSegment(val weight: Float, val color: Int, val phase: Phase?)
 
 /**
  * Turns the sleep log into the band that runs around the edge of the face.
  *
- * The whole ring is one 24 hour window ending now, so the seam at the top is both "24 hours ago"
- * and "this moment", and every segment's share of the circle is its share of the day.
+ * The ring is *today*: midnight at the top, the whole circle one calendar day. Position on the band
+ * is therefore a time of day you can read directly — the night sits where the night was — and the
+ * part of the day still to come is left almost dark, so the ring fills as the day is lived.
  */
 object DayRing {
-
-    val WINDOW_MILLIS = 24L * 60 * 60 * 1000
 
     /**
      * A weighted-elements complication may carry at most seven elements, so a day with more
@@ -19,10 +21,37 @@ object DayRing {
      */
     const val MAX_COMPLICATION_ELEMENTS = 7
 
-    fun segments(log: SleepLog, nowMillis: Long, palette: Palette): List<RingSegment> =
-        log.segments(nowMillis - WINDOW_MILLIS, nowMillis)
+    private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+
+    /** Where midnight sits, as a fraction of the day, for callers drawing the ring themselves. */
+    fun startOfDay(nowMillis: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+        Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+
+    /** How far through the day it is now, 0 at midnight and 1 at the next — where "now" points. */
+    fun fractionOfDay(nowMillis: Long, zone: ZoneId = ZoneId.systemDefault()): Float =
+        ((nowMillis - startOfDay(nowMillis, zone)).toFloat() / MILLIS_PER_DAY).coerceIn(0f, 1f)
+
+    fun segments(
+        log: SleepLog,
+        nowMillis: Long,
+        palette: Palette,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): List<RingSegment> {
+        val dayStart = startOfDay(nowMillis, zone)
+
+        val lived = log.segments(dayStart, nowMillis)
             .filter { it.durationMillis > 0 }
             .map { RingSegment(it.durationMillis.toFloat(), palette.colorFor(it.phase), it.phase) }
+
+        // The rest of the day, so every segment keeps its true share of the circle and the band
+        // reads as a clock face rather than a bar that has been stretched to fit.
+        val remaining = (dayStart + MILLIS_PER_DAY - nowMillis).coerceAtLeast(0L)
+        return if (remaining > 0) {
+            lived + RingSegment(remaining.toFloat(), Palette.FUTURE, null)
+        } else {
+            lived
+        }
+    }
 
     /**
      * Reduces the ring to at most [limit] segments by repeatedly folding the shortest one into the

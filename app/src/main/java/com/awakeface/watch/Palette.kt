@@ -37,19 +37,12 @@ enum class Palette(
          */
         val UNKNOWN: Int = Color.parseColor("#25272C")
 
+        /**
+         * The part of today that has not happened yet. Darker than unknown, because "not yet" and
+         * "no record" are different statements and the day should visibly fill as it is lived.
+         */
+        val FUTURE: Int = Color.parseColor("#131418")
+
         fun fromId(id: String?): Palette = entries.firstOrNull { it.id == id } ?: DEFAULT
-    }
-}
-
-/** Whether the time of day is shown, and in which format. */
-enum class ClockMode(val id: String, val labelRes: Int) {
-    OFF("off", R.string.clock_off),
-    HOUR_12("12", R.string.clock_12),
-    HOUR_24("24", R.string.clock_24);
-
-    companion object {
-        val DEFAULT = HOUR_12
-
-        fun fromId(id: String?): ClockMode = entries.firstOrNull { it.id == id } ?: DEFAULT
     }
 }
