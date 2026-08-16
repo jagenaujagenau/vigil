@@ -1,133 +1,152 @@
-# Vigil — a Wear OS watch face that shows how long you've been awake
+# Vigil — a Wear OS watch face that counts time awake, not clock time
 
-Instead of the time of day, the face shows elapsed time since you woke up:
+<img src="docs/vigil.png" width="320" alt="Vigil on a Pixel Watch 2: a sun, 3h 22m, and a ring showing the night in teal and the day so far in coral">
 
-```
-                   ☀
-               14h 07m
-                9:23 AM
-               Fri 14 Aug
-```
+*A real morning on a Pixel Watch 2: awake past midnight, asleep until 09:17,
+three and a bit hours since.*
 
-The band around the rim is **today**: midnight at the top, the whole circle one
-calendar day, coloured where you were awake and where you were asleep, and left
-almost dark for the hours still to come. Position on the band is a time of day you
-can read directly, so a night sits where the night was.
+The big figure is the stretch you are in: how long since you woke, or — once
+sleep is detected — how long you have been asleep. A sun or a moon says which,
+with no word to read and nothing to translate.
+
+The band around the rim is **today**. Midnight at the top, the whole circle one
+calendar day, coloured where you were awake and where you were asleep, left
+almost dark for the hours still to come. Position on the band is a time of day
+you can read directly, so a night sits where the night was.
 
 Two numbers give it a scale — `00` at the top, `12` at the bottom — with quarter
-ticks between and a hairline for now that travels round as the day is lived. A
-conventional analog clock would not work here: the band is a 24 hour dial, so a
-12 hour hand would sit at one angle while the same hour on the band sat at
+ticks between and a hairline for *now* that travels round as the day is lived.
+A conventional analog clock cannot go inside it: the band is a 24 hour dial, so
+a 12 hour hand would sit at one angle while the same hour on the band sat at
 another.
 
-The big figure is a single stretch, not the day: how long since you woke, or once
-sleep is detected, how long you have been asleep. The ring is the record of the
-intervals; the figure is the one you are in.
+**You never tell it anything.** The times shown are observed, never typed. There
+is no way to enter a wake time by hand, and nothing to correct.
 
-A sun or a moon says which stretch is being counted — no word to read, nothing to
-translate.
+## How it decides
 
-**You never tell it anything.** Health Services reports the wearer's activity
-state in the background, including sleep. The moment sleep is detected the face
-switches to a moon and counts the night instead, in the scheme's other colour, and
-the moment sleep ends the awake counter restarts from zero. There is no way to
-enter a wake time by hand and nothing to correct: the times shown are observed,
-never typed.
+`AwakeListenerService` receives `UserActivityInfo` from Health Services and
+watches both edges of `USER_ACTIVITY_ASLEEP`. `stateChangeTime` — not the time
+the callback arrives — is what gets recorded, so a delayed delivery does not skew
+either count.
 
-Tapping the face opens the settings, built from the current Wear OS components —
-`SwitchButton` rows and an `EdgeButton` to close — and only about how it looks:
+Which count is running is decided in one place, `AwakeState.current`. Everything
+else — both watch faces, the settings screen, the complication — reads that.
+
+### Sleep is not believed immediately
+
+Health Services flaps. One night on a Pixel Watch 2 it reported sleep for one
+minute at 17:48, two minutes at 00:43, and — ninety seconds after correctly
+detecting the 09:17 wake-up — twelve minutes at 09:18, so the face showed a moon
+at someone who was up and about.
+
+Reported sleep is therefore noted but not acted on for a quarter of an hour.
+Under that it is discarded outright: nothing drawn, nothing logged, the face
+unchanged. Over it, the count runs from the *true* start, so a real night loses
+nothing by the wait. One consequence: the log holds completed sleeps only, and a
+sleep in progress is drawn on the ring from the live timestamp instead.
+
+### Naps do not end the day
+
+- sleep shorter than **3 hours** is a nap, not a night, and does not restart the
+  awake count
+- a second wake-up within 3 hours of the recorded one is ignored
+
+A nap still appears on the ring, because it happened. The log records what
+happened; these rules decide what it *means*.
+
+### Where the first wake-up comes from
+
+Detection only fires on a *transition*, so a fresh install would have nothing to
+count until the following morning — a full day of a dead face. Three sources fill
+the gap, best-informed first:
+
+1. **Health Services state start.** Every report is stamped with the instant that
+   state began, so the first report after installing already knows when the wearer
+   stopped being asleep, hours earlier. Adopted as the wake-up, and the sleep
+   before it is written too, bounded to midnight.
+2. **Health Connect.** The night the watch recorded, which also gives its start,
+   so the ring can draw the night rather than inferring it. Best effort: absent,
+   refused or empty all fall through.
+3. **First run.** Count from now, marked provisional so any real observation
+   replaces it — including one that lands *behind* it in time.
+
+If Health Services never reports sleep at all — some watches, most emulators —
+a fallback treats a 3+ hour gap between two moments the wearer was demonstrably
+looking at an awake screen as a night. It engages only after Health Services has
+been silent for 36 hours, so it never fights the real signal.
+
+Detection needs `ACTIVITY_RECOGNITION`, requested on first run. Denied, the face
+still runs; it simply has nothing to count until it is granted.
+
+## Settings
+
+Tapping the face opens them, built from the current Wear OS components —
+`SwitchButton` rows and an `EdgeButton` to close. They are only about how it
+looks:
 
 - **Colours** — one of four schemes, each a pair (awake, asleep)
 - **Time** — on or off, and 12-hour or 24-hour
 - **Date** — on or off
 
-The one other thing the app does is ask for the activity permission that makes the
-observing possible. If it is declined, the face still runs; it just has nothing to
-count until the permission is granted.
-
-## Detecting sleep and the wake-up
-
-`AwakeListenerService` receives `UserActivityInfo` from Health Services and
-watches both edges of `USER_ACTIVITY_ASLEEP`: entering it starts the sleep count,
-leaving it is the wake-up. `stateChangeTime` — not the time the callback arrives —
-is what gets recorded, so a delayed delivery does not skew either count.
-
-Which count is running is decided in one place, `AwakeState.current`: a live
-`asleepSince` wins, otherwise it counts from the wake time. Everything else — both
-watch faces, the settings screen, the complication — reads that.
-
-### Where the first wake-up comes from
-
-Detection only fires on a *transition*, so a fresh install has nothing to count
-until the wearer's next morning — a full day of a dead face. Three sources fill
-that gap, best-informed first:
-
-1. **Health Services state start.** Every report is stamped with the instant that
-   state began, so the first report after installing already knows when the wearer
-   stopped being asleep, hours earlier. Adopted as the wake-up.
-2. **Health Connect.** The night the watch recorded, which also gives its start,
-   so the ring can draw the night rather than inferring it. Best effort: absent,
-   refused or empty all fall through.
-3. **First run.** Count from now, marked provisional so any real observation
-   replaces it.
-
-Waking implies having been asleep, so adopting a wake-up also writes the sleep
-before it, bounded to midnight. That inference is replaced the first night the
-watch observes properly.
-
-Two guards keep an afternoon nap from wiping out the day:
-
-- sleep shorter than **3 hours** is a nap, not a night, and is ignored
-- a second wake-up within 3 hours of the recorded one is ignored
-
-If Health Services never reports sleep — some watches, most emulators — there is
-a fallback: a gap of 3+ hours between two moments when the wearer was demonstrably
-looking at an awake screen is treated as a night. It only engages after Health
-Services has been silent for 36 hours, so it never fights the real signal.
-
-Detection needs `ACTIVITY_RECOGNITION`, which the settings screen requests on
-first run. Denying it falls back to setting the time by hand; nothing else breaks.
+Asking for the activity permission is the only other thing the app does.
 
 ## Two implementations, on purpose
 
-Google changed the rules mid-flight, so the repo ships the watch face twice:
-
 | Module | Format | Runs on |
 | --- | --- | --- |
-| `:app` | AndroidX / Jetpack watch face (`WatchFaceService`, custom `Canvas` renderer) | Wear OS 3–6 in practice — see below |
-| `:watchface` | Watch Face Format (declarative XML, no code) | Wear OS 4+, and the **only** format Wear OS 6 accepts |
-
-Wear OS 6 blocks AndroidX watch faces outright. Confirmed on an API 36 Wear
-emulator, where the system logs:
-
-```
-WearServices: [WFInfoResolver] Blocked watch face WatchFaceId[com.awakeface.watch, ...AwakeWatchFaceService]
-```
+| `:app` | AndroidX watch face (`WatchFaceService`, custom `Canvas` renderer) | Wear OS 3–6 in practice |
+| `:watchface` | Watch Face Format (declarative XML, no code) | Wear OS 4+, and the format Google intends to require |
 
 A Watch Face Format package may not contain executable code, so it cannot compute
-"now minus when you woke up" by itself. Everything therefore comes from `:app`
-through complications — one type per job:
+"now minus when you woke up" by itself. Everything comes from `:app` through
+complications — one type per job:
 
 | Type | Carries |
 | --- | --- |
-| `SHORT_TEXT` | the readout, and the sun/moon as its monochromatic image |
+| `SHORT_TEXT` | the readout — hours as text, minutes as title, so the face can set them at two sizes — and the sun/moon as its monochromatic image |
 | `WEIGHTED_ELEMENTS` | the day ring, already coloured in the chosen scheme |
 | `LONG_TEXT` | the display preferences, as a two character code |
 
 That last one deserves a note. A Watch Face Format face *can* carry its own
-settings, through `UserConfigurations` in the system editor — but a configuration
+settings through `UserConfigurations` in the system editor — but a configuration
 chosen there cannot reach back into this app, and the ring's colours have to be
 decided here, because they arrive baked into the complication. Splitting settings
-across two places to work around that would be worse than the code that avoids it,
-so every preference travels the same way: the app owns them, and the face branches
-on a code like `2D` (24-hour clock, date on):
+across two places to work around that would be worse than the code that avoids
+it, so every preference travels the same way and the face branches on a code like
+`2D` (24-hour clock, date on):
 
 ```xml
 <Expression name="clock24"><![CDATA[subText([COMPLICATION.TEXT], 0, 1) == "2"]]></Expression>
 ```
 
 The clock and date are drawn *inside* that complication's block, since a
-`Condition` can only branch on data in scope.
+`Condition` can only branch on data in scope. The dial — ticks, labels and the
+travelling now marker — sits outside it, computed from the time itself.
+
+## The day ring
+
+`SleepLog` is an append-only list of transitions kept in the same preferences
+file and pruned to 48 hours. `DayRing` turns it into weighted segments across
+today, plus one dark segment for the hours still to come, so every stretch keeps
+its true share of the circle.
+
+The Watch Face Format side draws them through `WEIGHTED_ELEMENTS`, a complication
+type that exists for exactly this shape:
+
+```xml
+<WeightedStroke thickness="8"
+    colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]"
+    weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]"/>
+```
+
+That type caps out at **seven** elements, so a busier day is simplified first:
+`DayRing.simplify` repeatedly folds the shortest segment into a neighbour, losing
+the stretches too brief to resolve on a 45mm screen and keeping the ones that
+carry the shape of the day.
+
+The ring redraws on a transition and on the data source's own refresh, so between
+refreshes it can trail the truth by a few minutes — a couple of degrees of arc.
 
 ## How the number stays live
 
@@ -141,52 +160,24 @@ DynamicInstant.withSecondsPrecision(wokeUpAt)
     .durationUntil(DynamicInstant.platformTimeWithSecondsPrecision())
 ```
 
-The hours and minutes are formatted from that expression. The 10 minute poll
-declared in the manifest is only a fallback for devices that can't evaluate
-dynamic values.
-
-## The day ring
-
-`SleepLog` is an append-only list of transitions — "at this instant the wearer
-became awake/asleep" — kept in the same preferences file and pruned to 48 hours.
-It records what happened; the nap rules decide what it *means*. That split is
-deliberate: an afternoon nap that does not restart the day still shows up on the
-ring, because it did happen.
-
-`DayRing` turns that log into weighted segments over the trailing 24 hours. The
-Watch Face Format side draws them through a second complication, of type
-`WEIGHTED_ELEMENTS` — a type that exists for exactly this shape:
-
-```xml
-<WeightedStroke thickness="14"
-    colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]"
-    weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]"/>
-```
-
-That type caps out at **seven** elements, so a day with more transitions is
-simplified first: `DayRing.simplify` repeatedly folds the shortest segment into a
-neighbour, which loses the stretches too brief to resolve on a 45mm screen and
-keeps the ones that carry the shape of the day.
-
-The ring redraws when a transition happens and on the data source's own refresh,
-so between refreshes it can trail the truth by a few minutes — a couple of degrees
-of arc. The number in the middle does not have that problem; it is a dynamic
-expression and ticks on its own.
+The 10 minute poll declared in the manifest is only a fallback for devices that
+cannot evaluate dynamic values.
 
 ## Layout
 
 ```
 :app/
   AwakeWatchFaceService.kt     AndroidX watch face + tap-to-configure
-  AwakeRenderer.kt             Canvas renderer (day ring, big duration, ambient variants)
-  AwakeComplicationService.kt  Publishes readout, ring and preferences as complications
+  AwakeRenderer.kt             Canvas renderer: dial, day ring, figure, footer
+  AwakeComplicationService.kt  Publishes readout, ring and preferences
   AwakeListenerService.kt      Health Services sleep/wake transitions
-  AwakeDetector.kt             Registration, nap guards, fallback heuristic
-  SleepLog.kt                  Append-only history of transitions
-  DayRing.kt                   That history as 24 hours of weighted segments
+  AwakeDetector.kt             Registration, confirmation delay, nap guards
+  SleepHistory.kt              Health Connect, for the night already recorded
+  SleepLog.kt                  Completed sleep/wake intervals
+  DayRing.kt                   That log as today, in weighted segments
   WakeStore.kt                 Observed times, kept apart from chosen preferences
-  SettingsActivity.kt          Colours, time, date — and the permission ask
-  Palette.kt                   The four colour schemes and the clock modes
+  Palette.kt                   The four colour schemes
+  SettingsActivity.kt          Wear Compose settings and the permission ask
 :watchface/
   res/raw/watchface.xml        The Watch Face Format face
   res/xml/watch_face_info.xml  Required; points at the preview image
@@ -194,7 +185,7 @@ expression and ticks on its own.
 ```
 
 Both implementations read the same `SharedPreferences` file, so switching between
-them keeps your wake time and your history.
+them keeps your history.
 
 ## Build
 
@@ -205,10 +196,10 @@ them keeps your wake time and your history.
 Build **release**, not debug, even for sideloading. Debug builds are unshrunk and
 `debuggable`, which stops ART optimising them ahead of time — on a watch that is
 38 MB and a 3.6 second cold start against 3.4 MB and 0.6 seconds. Both are signed
-with the debug key so they still install directly. Use debug only when you need
+with the debug key so they install directly. Use debug only when you need
 `run-as` to inspect stored state.
 
-Validate the Watch Face Format XML (catches errors the build does not):
+Validate the Watch Face Format XML, which the build does not check:
 
 ```bash
 curl -sL -o wff-validator.jar \
@@ -219,69 +210,63 @@ java -jar wff-validator.jar 2 watchface/src/main/res/raw/watchface.xml
 ## Install
 
 ```bash
-adb install -r app/build/outputs/apk/release/app-release.apk   # the face, and everything with logic in it
-adb install -r watchface/build/outputs/apk/release/watchface-release.apk   # optional, Watch Face Format
+adb install -r app/build/outputs/apk/release/app-release.apk          # the face and all the logic
+adb install -r watchface/build/outputs/apk/release/watchface-release.apk  # optional
 ```
 
-Then pick **Vigil** from the watch face picker: long-press the current face →
-**Add new** → **Vigil**, then tap it once more to make it current.
+Installing both puts *two* Vigil entries in the picker, one per package. On a
+watch that runs the AndroidX face, the second is redundant.
 
-Tapping the face opens the settings; the **Vigil** app in the launcher opens the
-same screen. Grant the activity permission when asked and the face starts counting
-at your next wake-up.
+Then long-press the current face → **Add new** → **Vigil**, and tap it again to
+make it current. Grant the activity permission when asked.
 
-## What has actually been tested
+## What has actually been verified
 
-Verified on a Wear OS 5 (API 34) emulator, with the Watch Face Format face active:
+On a **Pixel Watch 2**:
 
-- the face renders and the readout advances on its own (0h 01m → 0h 03m with no
-  complication refresh in between), confirming the dynamic expression evaluates
-  on device
-- the face binds to the complication provider through `DefaultProviderPolicy`
-  (`DWF:WearComplicationProvider: [11:RANGED_VALUE] com.awakeface.watch/...`)
-- tapping the face opens the settings screen
-- sleep detection, driven end to end with Health Services synthetic data
-  (`whs.synthetic.user.START_SLEEPING` / `STOP_SLEEPING`): falling asleep switched
-  the icon to the moon and started counting the night; waking switched it back to
-  the sun and left the day's count alone, the short synthetic night being
-  correctly rejected as a nap
-- both nap guards reject the wake-ups they are supposed to reject
-- the day ring, seeded with a night, a day and a nap: rendered as grey / indigo /
-  cyan / indigo / cyan segments in the right proportions, ending at the "now"
-  tick, and a live sleep transition appended to the log and redrew the band
-- all three settings reaching the face: switching to Ember recoloured the ring,
-  24-hour dropped the AM/PM, and turning the date off removed its line
-- the permission flow both ways — granted, and declined into the in-app card that
-  explains why and offers to ask again
-- `watchface.xml` passes Google's `wff-validator` against format version 2
+- an overnight sleep detected end to end: asleep 01:02, `detected wake-up at
+  07:17Z` after 8h15m, the day restarting from that instant
+- both nap guards rejecting what they should, including a 12 minute misread
+- the first wake-up adopted from a Health Services state start, hours before the
+  face was installed — `adopted observed wake-up at 07:00:29Z`, face reading
+  5h 27m against 5.44h of arithmetic
+- the day dial: sleep drawn from midnight to 09:00, awake to now, the rest dark
+- release build cold starting in 582 ms against 3639 ms for debug
 
-### A correction the hardware forced
+On a **Wear OS 5 emulator**, with the Watch Face Format face active:
+
+- the readout advancing on its own with no complication refresh, confirming the
+  dynamic expression evaluates on device
+- the face binding to the provider through `DefaultProviderPolicy`
+- sleep confirmation both ways: a 12 second blip discarded with the log
+  untouched, a 25 minute sleep showing the moon, the count, and its own ring
+  segment
+- all three settings reaching the face, and both permission paths
+- `watchface.xml` passing `wff-validator` against format version 2
+
+### Emulators are wrong about watch face availability
 
 Emulator images refuse to list a sideloaded AndroidX watch face — Wear OS 5 logs
 `WFInfoResolver: Unsupported legacy watch face`, Wear OS 6 logs `Blocked watch
 face` — which made the `:app` face look dead on arrival. It is not. On a real
 Pixel Watch 2 it appears in the picker, runs, and is the face this was developed
-against. Emulators are wrong about this; do not trust them on watch face
-availability.
+against.
 
-The Watch Face Format module is still the one to keep for the day the platform
-does enforce it, and it is the only one testable on an emulator.
+The Wear OS 6 image goes further and surfaces *no* sideloaded watch face at all;
+its `set-watchface` debug broadcast fails for every sideloaded package, including
+Google's own unmodified `SimpleDigital` sample. That same broadcast works on real
+hardware:
 
-### Note on emulators
-
-The Wear OS 6 (API 36) emulator image does not surface *any* sideloaded watch
-face in its picker, and its `set-watchface` debug broadcast fails for every
-sideloaded package — including Google's own unmodified `SimpleDigital` sample:
-
-```
-set-watchface failed. FavoriteOperationException: Watch face package is not installed.
+```bash
+adb shell am broadcast -a com.google.android.wearable.app.DEBUG_SURFACE \
+  --es operation set-watchface \
+  --ecn component com.awakeface.watch/com.awakeface.watch.AwakeWatchFaceService
 ```
 
-On a Wear OS 5 (API 34) image the Watch Face Format face *is* offered — long-press
-the current face → **Add new** → **Vigil** — but the AndroidX face is still absent
-from that list — a limitation of the images, not of the face.
+Use a Wear OS 5 image to exercise the Watch Face Format build, and real hardware
+for anything else.
 
-To exercise sleep detection on an emulator:
+To drive sleep detection on an emulator:
 
 ```bash
 adb shell am broadcast -a "whs.USE_SYNTHETIC_PROVIDERS"        com.google.android.wearable.healthservices
@@ -289,6 +274,6 @@ adb shell am broadcast -a "whs.synthetic.user.START_SLEEPING"  com.google.androi
 adb shell am broadcast -a "whs.synthetic.user.STOP_SLEEPING"   com.google.android.wearable.healthservices
 ```
 
-A synthetic night is only seconds long, so the 3 hour guard will reject it and say
-so in the log; backdate `asleep_since` in the app's shared preferences to see the
-wake time actually get written.
+A synthetic night lasts seconds, so it will be discarded as a blip. Backdate
+`asleep_since` in the app's shared preferences (debug build, via `run-as`) to see
+the confirmed-sleep and wake-up paths run.
