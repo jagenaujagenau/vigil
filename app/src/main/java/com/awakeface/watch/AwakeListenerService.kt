@@ -24,13 +24,11 @@ class AwakeListenerService : PassiveListenerService() {
         Log.i(AwakeDetector.TAG, "activity state ${state.name} at $changedAt")
 
         if (state == UserActivityState.USER_ACTIVITY_ASLEEP) {
+            // Noted, but not acted on: nothing is written to the log and the face is not told,
+            // because most reported sleep on real hardware turns out to be a blip of a minute or
+            // two. It becomes visible on its own once it has lasted long enough to be believed.
             if (store.asleepSinceEpochMillis == null) {
                 store.asleepSinceEpochMillis = changedAt.toEpochMilli()
-                // The log keeps every real transition, naps included, because the ring draws the
-                // day as it happened rather than as the nap rules score it.
-                SleepLog(this).record(Phase.ASLEEP, changedAt.toEpochMilli())
-                // The face counts sleep from here, so it needs the new numbers now.
-                AwakeDetector.requestFaceUpdate(this)
             }
             return
         }
@@ -46,14 +44,21 @@ class AwakeListenerService : PassiveListenerService() {
             return
         }
 
-        // Any non-asleep state ends the night.
+        // Any non-asleep state ends the sleep.
         store.asleepSinceEpochMillis = null
 
-        AwakeDetector.onDetectedWake(
-            context = this,
-            wokeAt = changedAt,
-            sleptFor = Duration.between(Instant.ofEpochMilli(asleepSince), changedAt),
-        )
+        val sleptFor = Duration.between(Instant.ofEpochMilli(asleepSince), changedAt)
+        if (sleptFor < AwakeDetector.CONFIRM_SLEEP) {
+            // Never shown, so there is nothing to correct and nothing worth recording.
+            Log.i(AwakeDetector.TAG, "discarding ${sleptFor.toMinutes()}m of reported sleep")
+            return
+        }
+
+        // Now that it is real, the log gets both ends of it — the ring draws every genuine sleep,
+        // naps included, even though the nap rules will not let a short one restart the day.
+        SleepLog(this).record(Phase.ASLEEP, asleepSince)
+
+        AwakeDetector.onDetectedWake(context = this, wokeAt = changedAt, sleptFor = sleptFor)
     }
 
     override fun onPermissionLost() {

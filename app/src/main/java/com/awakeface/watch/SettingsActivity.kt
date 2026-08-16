@@ -57,7 +57,7 @@ class SettingsActivity : ComponentActivity() {
             SettingsScreen(
                 store = store,
                 hasActivityPermission = { AwakeDetector.hasPermission(this) },
-                onPermissionGranted = { AwakeDetector.start(this) },
+                onPermissionGranted = { AwakeDetector.start(this, force = true) },
                 onChanged = { AwakeDetector.requestFaceUpdate(this) },
                 onDone = { finish() },
             )

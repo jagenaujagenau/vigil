@@ -8,6 +8,7 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        AwakeDetector.start(context)
+        // A reboot clears the registration, so this is one of the times it must be redone.
+        AwakeDetector.start(context, force = true)
     }
 }

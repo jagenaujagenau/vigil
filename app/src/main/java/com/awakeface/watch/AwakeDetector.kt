@@ -32,8 +32,22 @@ object AwakeDetector {
     /** If Health Services has said nothing for this long, assume it is not going to. */
     private val HEALTH_SERVICES_SILENT: Duration = Duration.ofHours(36)
 
+    /**
+     * How long a reported sleep has to last before the face believes it.
+     *
+     * Health Services flaps: on a real night it reported asleep for one minute at 17:48, two
+     * minutes at 00:43, and — ninety seconds after correctly detecting the morning wake-up —
+     * twelve minutes at 09:18, during which the face sat there showing a moon at someone who was
+     * up and about. Nothing under a quarter of an hour is worth changing the face for, and a real
+     * night loses nothing: the count still runs from the true start once it is believed.
+     */
+    val CONFIRM_SLEEP: Duration = Duration.ofMinutes(15)
+
     /** An adopted stretch older than this is stale history, not the morning just gone. */
     private val MAX_ADOPTED_AGE: Duration = Duration.ofHours(20)
+
+    /** How often re-registering passive monitoring is worth the round trip. */
+    private val REGISTRATION_INTERVAL: Duration = Duration.ofHours(12)
 
     /** Don't rewrite the "last seen awake" timestamp more often than this. */
     private const val INTERACTION_WRITE_INTERVAL_MILLIS = 60_000L
@@ -66,12 +80,21 @@ object AwakeDetector {
         Log.i(TAG, "no wake-up on record; counting from first run until a real one turns up")
     }
 
-    fun start(context: Context) {
+    fun start(context: Context, force: Boolean = false) {
         // Before the permission check: the face should count even where detection cannot run, and
         // the screen-gap fallback can still correct it later.
         ensureCounting(context)
 
         if (!hasPermission(context)) return
+
+        // Health Services keeps the registration until it is replaced or the watch reboots, but
+        // every service start was re-registering anyway — thirteen times in one day on real
+        // hardware. Boot and permission changes force it; routine wake-ups do not.
+        val store = WakeStore(context)
+        val last = store.lastRegisteredEpochMillis
+        val now = System.currentTimeMillis()
+        if (!force && last != null && now - last < REGISTRATION_INTERVAL.toMillis()) return
+        store.lastRegisteredEpochMillis = now
 
         val config = PassiveListenerConfig.builder()
             .setShouldUserActivityInfoBeRequested(true)

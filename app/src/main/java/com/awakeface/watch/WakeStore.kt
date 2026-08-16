@@ -40,6 +40,11 @@ class WakeStore(context: Context) {
         get() = prefs.getLong(KEY_LAST_HEALTH_REPORT, NOT_SET).takeIf { it != NOT_SET }
         set(value) = putLong(KEY_LAST_HEALTH_REPORT, value)
 
+    /** When passive monitoring was last registered, so it is not re-registered on every start. */
+    var lastRegisteredEpochMillis: Long?
+        get() = prefs.getLong(KEY_LAST_REGISTERED, NOT_SET).takeIf { it != NOT_SET }
+        set(value) = putLong(KEY_LAST_REGISTERED, value)
+
     /** The last time the wearer was demonstrably looking at an awake screen. */
     var lastInteractionEpochMillis: Long?
         get() = prefs.getLong(KEY_LAST_INTERACTION, NOT_SET).takeIf { it != NOT_SET }
@@ -68,6 +73,13 @@ class WakeStore(context: Context) {
         get() = prefs.getBoolean(KEY_SHOW_DATE, true)
         set(value) = prefs.edit().putBoolean(KEY_SHOW_DATE, value).apply()
 
+    /**
+     * When the wearer fell asleep, but only once that sleep has lasted long enough to be believed.
+     * Everything that shows sleep reads this rather than the raw timestamp.
+     */
+    fun confirmedAsleepSince(nowMillis: Long): Long? =
+        asleepSinceEpochMillis?.takeIf { nowMillis - it >= AwakeDetector.CONFIRM_SLEEP.toMillis() }
+
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }
@@ -87,6 +99,7 @@ class WakeStore(context: Context) {
         const val KEY_WAKE_PROVISIONAL = "wake_provisional"
         const val KEY_LAST_HEALTH_REPORT = "last_health_report"
         const val KEY_LAST_INTERACTION = "last_interaction"
+        const val KEY_LAST_REGISTERED = "last_registered"
         const val KEY_PALETTE = "palette"
         const val KEY_SHOW_CLOCK = "show_clock"
         const val KEY_USE_24_HOUR = "use_24_hour"
@@ -119,7 +132,7 @@ data class AwakeState(
     companion object {
         /** Reads whichever count is currently running. Sleep, once detected, takes precedence. */
         fun current(store: WakeStore, nowMillis: Long): AwakeState {
-            val asleepSince = store.asleepSinceEpochMillis
+            val asleepSince = store.confirmedAsleepSince(nowMillis)
             return if (asleepSince != null) {
                 from(Phase.ASLEEP, asleepSince, nowMillis)
             } else {

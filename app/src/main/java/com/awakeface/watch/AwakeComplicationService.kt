@@ -124,7 +124,7 @@ class AwakeComplicationService : SuspendingComplicationDataSourceService() {
      */
     private fun dayRing(nowMillis: Long): ComplicationData {
         val palette = WakeStore(this).palette
-        val segments = DayRing.simplify(DayRing.segments(SleepLog(this), nowMillis, palette))
+        val segments = DayRing.simplify(DayRing.segments(WakeStore(this), SleepLog(this), nowMillis, palette))
             .ifEmpty { listOf(RingSegment(1f, Palette.UNKNOWN, null)) }
 
         val asleepHours = segments

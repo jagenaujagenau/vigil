@@ -127,7 +127,7 @@ class AwakeRenderer(
         ringPaint.strokeCap = Paint.Cap.BUTT
         ringPaint.strokeWidth = stroke
 
-        val segments = DayRing.segments(sleepLog, nowMillis, palette)
+        val segments = DayRing.segments(store, sleepLog, nowMillis, palette)
         if (segments.isEmpty()) {
             ringPaint.color = Palette.UNKNOWN
             canvas.drawArc(arc, 0f, 360f, false, ringPaint)

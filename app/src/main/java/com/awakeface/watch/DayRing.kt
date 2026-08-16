@@ -32,6 +32,7 @@ object DayRing {
         ((nowMillis - startOfDay(nowMillis, zone)).toFloat() / MILLIS_PER_DAY).coerceIn(0f, 1f)
 
     fun segments(
+        store: WakeStore,
         log: SleepLog,
         nowMillis: Long,
         palette: Palette,
@@ -39,9 +40,20 @@ object DayRing {
     ): List<RingSegment> {
         val dayStart = startOfDay(nowMillis, zone)
 
-        val lived = log.segments(dayStart, nowMillis)
+        // A sleep in progress is not in the log yet — it is only written once it ends, so that a
+        // blip of a minute or two never reaches the ring at all. Draw it from the live timestamp.
+        val sleepStart = store.confirmedAsleepSince(nowMillis)
+        val loggedUntil = sleepStart?.coerceAtLeast(dayStart) ?: nowMillis
+
+        val lived = log.segments(dayStart, loggedUntil)
             .filter { it.durationMillis > 0 }
-            .map { RingSegment(it.durationMillis.toFloat(), palette.colorFor(it.phase), it.phase) }
+            .map { RingSegment(it.durationMillis.toFloat(), palette.colorFor(it.phase), it.phase) } +
+            if (sleepStart != null) {
+                val from = maxOf(sleepStart, dayStart)
+                listOf(RingSegment((nowMillis - from).toFloat(), palette.asleep, Phase.ASLEEP))
+            } else {
+                emptyList()
+            }
 
         // The rest of the day, so every segment keeps its true share of the circle and the band
         // reads as a clock face rather than a bar that has been stretched to fit.
