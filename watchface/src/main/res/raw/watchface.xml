@@ -94,7 +94,7 @@
                 </Rectangle>
             </PartDraw>
 
-            <PartText x="0" y="28" width="450" height="30">
+            <PartText x="0" y="36" width="450" height="30">
                 <Text align="CENTER">
                     <Font family="SYNC_TO_DEVICE" size="18.5" color="#4bffffff">
                         <Template><![CDATA[%s]]><Parameter expression="&quot;00&quot;"/></Template>
@@ -102,7 +102,7 @@
                 </Text>
             </PartText>
 
-            <PartText x="0" y="392" width="450" height="30">
+            <PartText x="0" y="384" width="450" height="30">
                 <Text align="CENTER">
                     <Font family="SYNC_TO_DEVICE" size="18.5" color="#4bffffff">
                         <Template><![CDATA[%s]]><Parameter expression="&quot;12&quot;"/></Template>
@@ -208,9 +208,9 @@
                     </Expressions>
 
                     <Compare expression="clock24">
-                        <PartText x="0" y="302" width="450" height="34">
+                        <PartText x="0" y="300" width="450" height="42">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="26.0" weight="NORMAL" color="#73ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="32.5" weight="NORMAL" color="#96ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;HH:mm&quot;)"/>
                                     </Template>
@@ -220,9 +220,9 @@
                     </Compare>
 
                     <Compare expression="clock12">
-                        <PartText x="0" y="302" width="450" height="34">
+                        <PartText x="0" y="300" width="450" height="42">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="26.0" weight="NORMAL" color="#73ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="32.5" weight="NORMAL" color="#96ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;h:mm a&quot;)"/>
                                     </Template>
@@ -233,9 +233,9 @@
 
                     <!-- Clock off: draw nothing. -->
                     <Default>
-                        <PartText x="0" y="302" width="450" height="34" alpha="0">
+                        <PartText x="0" y="300" width="450" height="42" alpha="0">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="26.0" color="#73ffffff">
+                                <Font family="SYNC_TO_DEVICE" size="32.5" color="#96ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="&quot;&quot;"/>
                                     </Template>
@@ -251,10 +251,10 @@
                     </Expressions>
 
                     <Compare expression="showDate">
-                        <PartText x="0" y="338" width="450" height="30">
+                        <PartText x="0" y="343" width="450" height="34">
                             <Variant mode="AMBIENT" target="alpha" value="120"/>
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="21.0" weight="NORMAL" color="#4dffffff">
+                                <Font family="SYNC_TO_DEVICE" size="26.0" weight="NORMAL" color="#69ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="icuText(&quot;EEE d MMM&quot;)"/>
                                     </Template>
@@ -264,9 +264,9 @@
                     </Compare>
 
                     <Default>
-                        <PartText x="0" y="338" width="450" height="30" alpha="0">
+                        <PartText x="0" y="343" width="450" height="34" alpha="0">
                             <Text align="CENTER">
-                                <Font family="SYNC_TO_DEVICE" size="21.0" color="#4dffffff">
+                                <Font family="SYNC_TO_DEVICE" size="26.0" color="#69ffffff">
                                     <Template><![CDATA[%s]]>
                                         <Parameter expression="&quot;&quot;"/>
                                     </Template>

@@ -197,8 +197,9 @@ class AwakeRenderer(
         textPaint.textSize = radius * 0.082f
         textPaint.color = Color.argb(75, 255, 255, 255)
 
-        // Inside the quarter ticks, which reach down to about 0.85 of the radius.
-        val labelRadius = radius * 0.808f
+        // Inside the quarter ticks, which reach down to about 0.85 of the radius, and clear of them:
+        // set any closer the numbers touch their own tick and the two read as one mark.
+        val labelRadius = radius * 0.772f
         val half = textPaint.textSize * 0.36f
         canvas.drawText("00", cx, cy - labelRadius + half, textPaint)
         canvas.drawText("12", cx, cy + labelRadius + half, textPaint)
@@ -273,7 +274,12 @@ class AwakeRenderer(
         textPaint.letterSpacing = 0f
     }
 
-    /** Time of day and date, each shown only if asked for, each dimmer than the thing above it. */
+    /**
+     * Time of day and date, each shown only if asked for, each dimmer than the thing above it.
+     *
+     * Dimmer, but still meant to be read: small print set too faint is not restraint, it is a line
+     * you have to lift the watch and squint at.
+     */
     private fun drawFooter(
         canvas: Canvas,
         cx: Float,
@@ -286,15 +292,15 @@ class AwakeRenderer(
 
         if (store.showClock) {
             val clock = zonedDateTime.format(if (store.use24Hour) clock24 else clock12)
-            textPaint.textSize = radius * 0.116f
-            textPaint.color = Color.argb(if (ambient) 90 else 115, 255, 255, 255)
-            canvas.drawText(clock, cx, cy + radius * 0.418f, textPaint)
+            textPaint.textSize = radius * 0.145f
+            textPaint.color = Color.argb(if (ambient) 110 else 150, 255, 255, 255)
+            canvas.drawText(clock, cx, cy + radius * 0.425f, textPaint)
         }
 
         if (store.showDate) {
-            textPaint.textSize = radius * 0.093f
-            textPaint.color = Color.argb(if (ambient) 70 else 77, 255, 255, 255)
-            canvas.drawText(zonedDateTime.format(dateFormat), cx, cy + radius * 0.569f, textPaint)
+            textPaint.textSize = radius * 0.115f
+            textPaint.color = Color.argb(if (ambient) 85 else 105, 255, 255, 255)
+            canvas.drawText(zonedDateTime.format(dateFormat), cx, cy + radius * 0.600f, textPaint)
         }
     }
 
