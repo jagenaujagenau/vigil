@@ -8,10 +8,10 @@
 [![Wear OS](https://img.shields.io/badge/Wear%20OS-4%2B-4285F4?style=for-the-badge&logo=wearos&logoColor=white)](https://wearos.google.com)
 [![Stars](https://img.shields.io/github/stars/jagenaujagenau/vigil?style=for-the-badge)](https://github.com/jagenaujagenau/vigil/stargazers)
 
-<img src="docs/vigil.png" width="320" alt="Vigil on a Pixel Watch 2: a sun, 3h 22m, and a ring showing the night in teal and the day so far in coral">
+<img src="docs/vigil.png" width="320" alt="Vigil on a Pixel Watch 2: a sun, 3h 37m, and a ring of ticks showing the night in blue and the day so far in teal">
 
-*A real morning on a Pixel Watch 2: awake past midnight, asleep until 09:17,
-three and a bit hours since.*
+*A real morning on a Pixel Watch 2: awake past midnight, asleep until just
+before eight, three and a half hours since.*
 
 </div>
 
@@ -65,10 +65,10 @@ coloured where you were awake and where you were asleep, left almost dark for th
 hours still to come. Position on the band is a time of day you can read directly,
 so a night sits where the night was.
 
-It is drawn as a run of short ticks rather than one solid stroke, and one colour
-fades into the next instead of meeting it at a line. Sleep is detected over
-minutes, not at an instant, so a hard edge would claim a precision the data does
-not have.
+It is drawn as a run of short ticks — one per ten minutes of the day — rather
+than one solid stroke, and one colour fades into the next instead of meeting it
+at a line. Sleep is detected over minutes, not at an instant, so a hard edge
+would claim a precision the data does not have.
 
 Two numbers give it a scale — `00` at the top, `12` at the bottom — with quarter
 ticks between and a hairline for *now* that travels round as the day is lived.
@@ -199,7 +199,7 @@ share of the circle.
 This app draws them as one stroked circle, not an arc per stretch: `RingGradient`
 turns the segments into sweep-gradient stops that hold each colour flat through
 the middle of its stretch and cross over the boundary, and a `DashPathEffect`
-breaks the stroke into 180 ticks. Midnight is the one boundary a sweep cannot
+breaks the stroke into 144 ticks, one per ten minutes of the day. Midnight is the one boundary a sweep cannot
 fade across, being where it begins and ends, so both ends are pinned to the
 halfway colour and meet invisibly.
 

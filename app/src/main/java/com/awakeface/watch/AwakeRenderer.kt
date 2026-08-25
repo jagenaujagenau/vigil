@@ -187,8 +187,8 @@ class AwakeRenderer(
      */
     private fun drawTickBand(canvas: Canvas, radius: Float, inset: Float, ambient: Boolean) {
         val ringRadius = radius - inset
-        // A tick every two degrees, a touch under half of it inked. Held to an exact number of
-        // whole ticks around the circle so the last one meets the first cleanly at midnight.
+        // An exact number of whole ticks around the circle, so the last one meets the first cleanly
+        // at midnight rather than leaving a short mark there.
         val pitch = (2f * Math.PI.toFloat() * ringRadius) / TICK_COUNT
 
         if (!ambient) {
@@ -196,7 +196,7 @@ class AwakeRenderer(
             // day is still visibly part of the same ring.
             ringPaint.pathEffect = null
             ringPaint.maskFilter = null
-            ringPaint.alpha = 30
+            ringPaint.alpha = 55
             canvas.drawPath(ringPath, ringPaint)
         }
 
@@ -205,8 +205,8 @@ class AwakeRenderer(
         if (!ambient) {
             // The bloom. Blurred and faint, drawn under the ticks, so the colour spills a little
             // past the band the way light does instead of stopping at the edge of the stroke.
-            ringPaint.maskFilter = BlurMaskFilter(radius * 0.045f, BlurMaskFilter.Blur.NORMAL)
-            ringPaint.alpha = 140
+            ringPaint.maskFilter = BlurMaskFilter(radius * 0.060f, BlurMaskFilter.Blur.NORMAL)
+            ringPaint.alpha = 175
             canvas.drawPath(ringPath, ringPaint)
             ringPaint.maskFilter = null
         }
@@ -368,10 +368,16 @@ class AwakeRenderer(
         private const val UPDATE_DELAY_MILLIS = 60_000L
         private const val START_ANGLE = -90f
 
-        /** Ticks around the band: one every two degrees, twelve to the hour of the day. */
-        private const val TICK_COUNT = 180
+        /**
+         * Ticks around the band: one per ten minutes of the day, six to the hour.
+         *
+         * The count is what the band is a scale *of*, so it is worth it being a real unit rather
+         * than whatever number looked right. Denser than this and the marks fuse back into the line
+         * the ticks were meant to break up; sparser and the ring reads as a segmented bar.
+         */
+        private const val TICK_COUNT = 144
 
         /** How much of each tick's span is inked; the rest is the gap to the next. */
-        private const val TICK_DUTY = 0.45f
+        private const val TICK_DUTY = 0.47f
     }
 }
