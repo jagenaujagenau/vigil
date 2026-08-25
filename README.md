@@ -130,7 +130,8 @@ still runs; it simply has nothing to count until it is granted.
 
 ## Settings
 
-Tapping the face opens them, built from the current Wear OS components —
+The pencil beside Vigil in the watch face picker opens them, the same way every
+other face is configured. They are built from the current Wear OS components —
 `SwitchButton` rows and an `EdgeButton` to close. They are only about how it
 looks:
 
@@ -230,7 +231,7 @@ vigil/
 │       │   ├── AwakeDetector.kt              registration, confirmation, nap guards
 │       │   ├── AwakeListenerService.kt       Health Services sleep/wake transitions
 │       │   ├── AwakeRenderer.kt              dial, day ring, figure, footer
-│       │   ├── AwakeWatchFaceService.kt      AndroidX face + tap-to-configure
+│       │   ├── AwakeWatchFaceService.kt      AndroidX face, editor declared in the manifest
 │       │   ├── BootReceiver.kt               re-registers detection after a reboot
 │       │   ├── DayRing.kt                    the log as today, in weighted segments
 │       │   ├── Palette.kt                    the four colour schemes

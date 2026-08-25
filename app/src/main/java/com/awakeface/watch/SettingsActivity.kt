@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.AppScaffold
@@ -39,6 +40,8 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
+import androidx.wear.watchface.editor.EditorSession
+import kotlinx.coroutines.launch
 
 /**
  * The whole of the face's settings: how it looks.
@@ -46,6 +49,10 @@ import androidx.wear.compose.material3.Text
  * There is deliberately nothing here about sleeping or waking. Those times are observed, never
  * entered — so the only thing this screen does besides appearance is ask for the permission that
  * makes the observing possible.
+ *
+ * It is reached two ways: from the launcher, and from the pencil beside the face in the watch face
+ * picker. The pencil hands over an editor session, which the picker uses to keep its preview in
+ * step and to know the edit finished.
  */
 class SettingsActivity : ComponentActivity() {
 
@@ -64,6 +71,20 @@ class SettingsActivity : ComponentActivity() {
         }
 
         askForSleepHistoryOnce(store)
+        if (intent?.action == WATCH_FACE_EDITOR_ACTION) joinEditorSession()
+    }
+
+    /**
+     * Answers the picker when it opened this screen through the pencil.
+     *
+     * The face has no watch face styles to edit — its settings are its own — so nothing is done
+     * with the session beyond holding it open: it closes with the activity, which is what tells
+     * the picker the edit is over. Failing to get one is harmless, so it is not treated as an error.
+     */
+    private fun joinEditorSession() {
+        lifecycleScope.launch {
+            runCatching { EditorSession.createOnWatchEditorSession(this@SettingsActivity) }
+        }
     }
 
     override fun onResume() {
@@ -97,6 +118,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val WATCH_FACE_EDITOR_ACTION = "androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR"
         private const val HEALTH_PERMISSIONS_ACTION = "androidx.health.ACTION_REQUEST_PERMISSIONS"
         private const val EXTRA_REQUEST_PERMISSIONS = "androidx.health.EXTRA_REQUEST_PERMISSIONS"
         private const val EXTRA_CALLING_PACKAGE = "androidx.health.EXTRA_CALLING_PACKAGE"
