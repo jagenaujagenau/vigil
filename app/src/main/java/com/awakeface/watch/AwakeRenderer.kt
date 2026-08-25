@@ -2,10 +2,15 @@ package com.awakeface.watch
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.BlurMaskFilter
 import android.graphics.Color
+import android.graphics.DashPathEffect
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.SweepGradient
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.view.SurfaceHolder
@@ -53,6 +58,9 @@ class AwakeRenderer(
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
+
+    /** The band's circle, reused rather than rebuilt: the same ring is stroked several times. */
+    private val ringPath = Path()
 
     private val textPaint = Paint().apply {
         isAntiAlias = true
@@ -119,29 +127,39 @@ class AwakeRenderer(
         palette: Palette,
         ambient: Boolean,
     ) {
-        val stroke = radius * if (ambient) 0.028f else 0.036f
+        // Ticks want more length than a solid band did: a mark too short to have a direction reads
+        // as a dot, and the band stops looking like a scale.
+        val stroke = radius * if (ambient) 0.036f else 0.052f
         val inset = stroke / 2f + radius * 0.026f
         val arc = RectF(cx - radius + inset, cy - radius + inset, cx + radius - inset, cy + radius - inset)
 
-        // Butt caps, so neighbouring stretches meet exactly instead of overlapping.
         ringPaint.strokeCap = Paint.Cap.BUTT
         ringPaint.strokeWidth = stroke
 
+        // The path starts at midnight, so the ticks are counted from there and the first one lands
+        // on the top of the face rather than wherever a circle happens to begin.
+        ringPath.reset()
+        ringPath.addArc(arc, START_ANGLE, 360f)
+
         val segments = DayRing.segments(store, sleepLog, nowMillis, palette)
-        if (segments.isEmpty()) {
-            ringPaint.color = Palette.UNKNOWN
-            canvas.drawArc(arc, 0f, 360f, false, ringPaint)
-        } else {
-            val total = segments.sumOf { it.weight.toDouble() }.toFloat().coerceAtLeast(1f)
-            var angle = START_ANGLE
-            for (segment in segments) {
-                val sweep = 360f * (segment.weight / total)
-                ringPaint.color = if (ambient) ambientColor(segment) else segment.color
-                // Overdraw by a hair: exact abutment leaves seams once anti-aliasing rounds down.
-                canvas.drawArc(arc, angle, sweep + 0.4f, false, ringPaint)
-                angle += sweep
-            }
+        val gradient = RingGradientBuilder.of(
+            segments.ifEmpty { listOf(RingSegment(1f, Palette.UNKNOWN, null)) },
+        ) { segment -> if (ambient) ambientColor(segment) else segment.color }
+
+        // One sweep for the whole day rather than an arc per stretch: the colours are carried by
+        // the shader, which is what lets one fade into the next instead of butting against it.
+        ringPaint.color = Color.WHITE
+        ringPaint.shader = SweepGradient(cx, cy, gradient.colors, gradient.positions).apply {
+            // The sweep starts at three o'clock; the day starts at midnight.
+            setLocalMatrix(Matrix().apply { setRotate(START_ANGLE, cx, cy) })
         }
+
+        drawTickBand(canvas, radius, inset, ambient)
+
+        ringPaint.shader = null
+        ringPaint.alpha = 255
+        ringPaint.pathEffect = null
+        ringPaint.maskFilter = null
 
         drawHourMarks(canvas, cx, cy, radius, inset, stroke, ambient)
 
@@ -154,6 +172,47 @@ class AwakeRenderer(
         canvas.rotate(360f * DayRing.fractionOfDay(nowMillis), cx, cy)
         canvas.drawLine(cx, cy - radius + inset - stroke, cx, cy - radius + inset + stroke, ringPaint)
         canvas.restore()
+    }
+
+    /**
+     * The band itself: a run of short radial ticks rather than one unbroken stroke.
+     *
+     * Ticks make the ring read as a *scale* — something a day is measured against — where a solid
+     * band reads as a bar that has been filled. They also carry the gradient better than a solid
+     * stroke does, since the eye reads a change across a row of marks more readily than across an
+     * even wash of colour.
+     *
+     * Three passes: a faint continuous track so the ring is still a ring where nothing is recorded,
+     * a blurred copy for the bloom, then the ticks themselves.
+     */
+    private fun drawTickBand(canvas: Canvas, radius: Float, inset: Float, ambient: Boolean) {
+        val ringRadius = radius - inset
+        // A tick every two degrees, a touch under half of it inked. Held to an exact number of
+        // whole ticks around the circle so the last one meets the first cleanly at midnight.
+        val pitch = (2f * Math.PI.toFloat() * ringRadius) / TICK_COUNT
+
+        if (!ambient) {
+            // The track: too dim to read as a segment, bright enough that the unlived part of the
+            // day is still visibly part of the same ring.
+            ringPaint.pathEffect = null
+            ringPaint.maskFilter = null
+            ringPaint.alpha = 30
+            canvas.drawPath(ringPath, ringPaint)
+        }
+
+        ringPaint.pathEffect = DashPathEffect(floatArrayOf(pitch * TICK_DUTY, pitch * (1f - TICK_DUTY)), 0f)
+
+        if (!ambient) {
+            // The bloom. Blurred and faint, drawn under the ticks, so the colour spills a little
+            // past the band the way light does instead of stopping at the edge of the stroke.
+            ringPaint.maskFilter = BlurMaskFilter(radius * 0.045f, BlurMaskFilter.Blur.NORMAL)
+            ringPaint.alpha = 140
+            canvas.drawPath(ringPath, ringPaint)
+            ringPaint.maskFilter = null
+        }
+
+        ringPaint.alpha = 255
+        canvas.drawPath(ringPath, ringPaint)
     }
 
     /**
@@ -308,5 +367,11 @@ class AwakeRenderer(
         /** Minute resolution is all this face shows, so redraw once a minute. */
         private const val UPDATE_DELAY_MILLIS = 60_000L
         private const val START_ANGLE = -90f
+
+        /** Ticks around the band: one every two degrees, twelve to the hour of the day. */
+        private const val TICK_COUNT = 180
+
+        /** How much of each tick's span is inked; the rest is the gap to the next. */
+        private const val TICK_DUTY = 0.45f
     }
 }

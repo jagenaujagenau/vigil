@@ -65,6 +65,11 @@ coloured where you were awake and where you were asleep, left almost dark for th
 hours still to come. Position on the band is a time of day you can read directly,
 so a night sits where the night was.
 
+It is drawn as a run of short ticks rather than one solid stroke, and one colour
+fades into the next instead of meeting it at a line. Sleep is detected over
+minutes, not at an instant, so a hard edge would claim a precision the data does
+not have.
+
 Two numbers give it a scale — `00` at the top, `12` at the bottom — with quarter
 ticks between and a hairline for *now* that travels round as the day is lived.
 A conventional analog clock cannot go inside it: the band is a 24 hour dial, so a
@@ -191,6 +196,13 @@ and pruned to 48 hours. `DayRing` turns it into weighted segments across today,
 plus one dark segment for the hours still to come, so every stretch keeps its true
 share of the circle.
 
+This app draws them as one stroked circle, not an arc per stretch: `RingGradient`
+turns the segments into sweep-gradient stops that hold each colour flat through
+the middle of its stretch and cross over the boundary, and a `DashPathEffect`
+breaks the stroke into 180 ticks. Midnight is the one boundary a sweep cannot
+fade across, being where it begins and ends, so both ends are pinned to the
+halfway colour and meet invisibly.
+
 The Watch Face Format side draws them through `WEIGHTED_ELEMENTS`, a complication
 type that exists for exactly this shape:
 
@@ -230,11 +242,12 @@ vigil/
 │       │   ├── AwakeComplicationService.kt   publishes readout, ring, preferences
 │       │   ├── AwakeDetector.kt              registration, confirmation, nap guards
 │       │   ├── AwakeListenerService.kt       Health Services sleep/wake transitions
-│       │   ├── AwakeRenderer.kt              dial, day ring, figure, footer
+│       │   ├── AwakeRenderer.kt              dial, tick band, figure, footer
 │       │   ├── AwakeWatchFaceService.kt      AndroidX face, editor declared in the manifest
 │       │   ├── BootReceiver.kt               re-registers detection after a reboot
 │       │   ├── DayRing.kt                    the log as today, in weighted segments
 │       │   ├── Palette.kt                    the four colour schemes
+│       │   ├── RingGradient.kt               the segments as sweep-gradient stops
 │       │   ├── SettingsActivity.kt           Wear Compose settings, permission ask
 │       │   ├── SleepHistory.kt               Health Connect, for a recorded night
 │       │   ├── SleepLog.kt                   completed sleep/wake intervals
